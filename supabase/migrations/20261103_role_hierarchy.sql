@@ -1,5 +1,5 @@
--- Dana Honda role hierarchy migration. Apply in Supabase SQL Editor after reviewing.
--- Keeps existing user IDs and business records intact.
+-- Dana Honda role hierarchy migration. Review before applying.
+-- Preserves existing Auth IDs and business records.
 alter table public.profiles add column if not exists email text;
 alter table public.profiles add column if not exists is_active boolean not null default true;
 
@@ -37,23 +37,27 @@ as $$
   );
 $$;
 
--- Only the server-side service-role API may mutate profile roles.
+-- Remove every legacy profile-management policy that could let a supervisor
+-- change role or account state directly through the client Data API.
 drop policy if exists "supervisor manages profiles" on public.profiles;
+drop policy if exists "active supervisor manages profiles" on public.profiles;
 drop policy if exists "profiles self or supervisor read" on public.profiles;
+drop policy if exists "profiles self or active supervisor read" on public.profiles;
+drop policy if exists "profiles self or management read" on public.profiles;
+
+-- Profile reads: own profile, or all profiles for active elevated roles.
 create policy "profiles self or management read" on public.profiles for select
 using (id = auth.uid() or public.is_supervisor());
 
--- Remove self-service profile mutation policies if present.
+-- No authenticated client-side INSERT/UPDATE/DELETE policies are created.
+-- Privileged profile mutations must go through the server-side service-role API.
 drop policy if exists "profiles update own" on public.profiles;
 drop policy if exists "profiles insert own" on public.profiles;
 drop policy if exists "profiles delete own" on public.profiles;
 
--- Existing supervisor-only data policies now include the super admin because
--- public.is_supervisor() recognizes both elevated roles.
--- Promote the known owner account only when that Auth user already exists.
+-- Promote the designated owner only if the matching Auth account exists.
 update public.profiles p
 set role = 'super_admin', is_active = true, email = 'courageeternell@gmail.com'
 from auth.users u
 where p.id = u.id
   and lower(u.email) = 'courageeternell@gmail.com';
-
