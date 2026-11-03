@@ -53,7 +53,10 @@ export default function Header() {
             <Link href="/prospects">Prospek</Link>
             <Link href="/spk">SPK</Link>
             {profile?.role === "supervisor" && (
-              <Link href="/reports">Laporan</Link>
+              <>
+                <Link href="/reports">Laporan</Link>
+                <Link href="/team">Kelola Sales</Link>
+              </>
             )}
             <Link href="/account">Akun</Link>
           </nav>
