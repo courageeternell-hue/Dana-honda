@@ -64,6 +64,10 @@ grant execute on function public.is_super_admin() to authenticated;
 grant execute on function public.is_supervisor() to authenticated;
 grant execute on function public.is_active_user() to authenticated;
 
+-- Trigger/event-trigger helpers are not RPC endpoints; only database triggers invoke them.
+revoke all on function public.log_sales_record_change() from public, anon, authenticated;
+revoke all on function public.rls_auto_enable() from public, anon, authenticated;
+
 drop policy if exists "active users delete permitted prospects" on public.prospects;
 drop policy if exists "active users read permitted prospects" on public.prospects;
 drop policy if exists "active users update permitted prospects" on public.prospects;
