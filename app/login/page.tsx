@@ -12,13 +12,62 @@ export default function Login() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError("");
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setError("Email atau password tidak sesuai. Periksa kembali lalu coba lagi.");
-    else router.push("/");
-    setBusy(false);
+
+    try {
+      const supabase = createClient();
+      const normalizedEmail = email.trim().toLowerCase();
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
+
+      if (authError) {
+        const code = (authError as { code?: string }).code;
+        if (code === "email_not_confirmed") {
+          setError("Email akun belum dikonfirmasi. Hubungi supervisor untuk bantuan.");
+        } else if (code === "invalid_credentials" || /invalid login credentials/i.test(authError.message)) {
+          setError("Email atau password salah. Pastikan memakai akun yang dibuat supervisor dan password yang benar.");
+        } else if (/network|fetch/i.test(authError.message)) {
+          setError("Koneksi ke server bermasalah. Periksa internet lalu coba lagi.");
+        } else {
+          setError("Login belum berhasil. Coba lagi beberapa saat atau hubungi supervisor.");
+        }
+        return;
+      }
+
+      if (!data.user) {
+        setError("Sesi login belum terbentuk. Silakan coba lagi.");
+        return;
+      }
+
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("is_active")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      if (profileError) {
+        await supabase.auth.signOut();
+        setError("Profil akun tidak dapat diverifikasi. Hubungi supervisor.");
+        return;
+      }
+
+      if (!profile || profile.is_active === false) {
+        await supabase.auth.signOut();
+        setError("Akun belum aktif atau belum terdaftar di sistem. Hubungi supervisor.");
+        return;
+      }
+
+      router.replace("/");
+      router.refresh();
+    } catch {
+      setError("Tidak dapat terhubung ke server. Periksa koneksi internet lalu coba lagi.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return <main className="login card">
