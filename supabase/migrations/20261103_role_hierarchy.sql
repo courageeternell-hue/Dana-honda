@@ -47,7 +47,7 @@ as $$
      me.role='super_admin' or me.id=target_user_id or (
        me.role='supervisor' and exists (
          select 1 from public.profiles sales where sales.id=target_user_id
-           and sales.role='sales' and sales.supervisor_id=me.id and sales.is_active=true
+           and sales.role='sales' and sales.supervisor_id=me.id
        )
      )
    )
