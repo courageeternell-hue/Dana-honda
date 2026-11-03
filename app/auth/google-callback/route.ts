@@ -22,13 +22,17 @@ export async function GET(request: NextRequest) {
   );
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
-  if (error) return NextResponse.redirect(new URL("/login?error=google", url.origin));
+  if (error) {
+    response.headers.set("location", new URL("/login?error=google", url.origin).toString());
+    return response;
+  }
 
   const { data: { user } } = await supabase.auth.getUser();
   const email = (user?.email || "").trim().toLowerCase();
   if (!user || email !== expectedEmail) {
     await supabase.auth.signOut();
-    return NextResponse.redirect(new URL("/login?error=not-allowed", url.origin));
+    response.headers.set("location", new URL("/login?error=not-allowed", url.origin).toString());
+    return response;
   }
 
   const { data: profile } = await supabase

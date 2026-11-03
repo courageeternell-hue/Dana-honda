@@ -5,7 +5,9 @@ import * as XLSX from "xlsx";
 export const runtime = "nodejs";
 
 function dateParam(value: string | null) {
-  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
+  if (!value || !/^\\d{4}-\\d{2}-\\d{2}$/.test(value)) return null;
+  const parsed = new Date(value + "T00:00:00.000Z");
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value ? value : null;
 }
 function styleSheet(sheet: XLSX.WorkSheet, rows: Record<string, unknown>[]) {
   const keys = rows.length ? Object.keys(rows[0]) : [];
@@ -26,9 +28,21 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const type = params.get("type") || "all";
   if (!["prospects", "spk", "all"].includes(type)) return NextResponse.json({ error: "Jenis laporan tidak dikenal." }, { status: 400 });
-  const from = dateParam(params.get("from"));
-  const to = dateParam(params.get("to"));
+  const rawFrom = params.get("from");
+  const rawTo = params.get("to");
+  const from = dateParam(rawFrom);
+  const to = dateParam(rawTo);
+  if ((rawFrom && !from) || (rawTo && !to)) return NextResponse.json({ error: "Format tanggal tidak valid." }, { status: 400 });
+  if (from && to && from > to) return NextResponse.json({ error: "Tanggal mulai tidak boleh melewati tanggal akhir." }, { status: 400 });
   const salesId = params.get("sales") || "";
+  const prospectStatus = params.get("prospectStatus") || "";
+  const spkStatus = params.get("spkStatus") || "";
+  if (salesId && !/^[0-9a-f-]{36}$/i.test(salesId)) return NextResponse.json({ error: "Filter Sales tidak valid." }, { status: 400 });
+  if (salesId && elevated) {
+    const { data: selectedSales } = await supabase.from("profiles").select("id,role").eq("id", salesId).maybeSingle();
+    if (!selectedSales || selectedSales.role !== "sales") return NextResponse.json({ error: "Sales tidak ditemukan dalam cakupan akses Anda." }, { status: 403 });
+  }
+  if (prospectStatus.length > 60 || spkStatus.length > 60) return NextResponse.json({ error: "Filter status terlalu panjang." }, { status: 400 });
   if (salesId && !elevated && salesId !== user.id) return NextResponse.json({ error: "Tidak boleh mengunduh data sales lain." }, { status: 403 });
 
   const workbook = XLSX.utils.book_new();
@@ -40,6 +54,7 @@ export async function GET(request: NextRequest) {
     if (from) query = query.gte("prospect_date", from);
     if (to) query = query.lte("prospect_date", to);
     if (elevated && salesId) query = query.eq("user_id", salesId);
+    if (prospectStatus) query = query.eq("status", prospectStatus);
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: "Data prospek gagal dibaca." }, { status: 500 });
     const ids = Array.from(new Set((data || []).map((row) => row.user_id)));
@@ -63,6 +78,7 @@ export async function GET(request: NextRequest) {
     if (from) query = query.gte("spk_date", from);
     if (to) query = query.lte("spk_date", to);
     if (elevated && salesId) query = query.eq("user_id", salesId);
+    if (spkStatus) query = query.eq("status", spkStatus);
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: "Data SPK gagal dibaca." }, { status: 500 });
     const rows = (data || []).map((row, index) => ({
