@@ -80,9 +80,9 @@ export async function GET(request: NextRequest) {
   const summary = [
     { "Jenis Laporan": "Prospek", "Jumlah Data": totalProspects },
     { "Jenis Laporan": "SPK", "Jumlah Data": totalSpk },
-    { "Jenis Laporan": "Periode Mulai": from || "Semua tanggal", "Jumlah Data": "" },
-    { "Jenis Laporan": "Periode Akhir": to || "Semua tanggal", "Jumlah Data": "" },
-    { "Jenis Laporan": "Dibuat Oleh": profile.full_name || user.email || "-", "Jumlah Data": "" },
+    { "Jenis Laporan": "Periode Mulai", "Jumlah Data": from || "Semua tanggal" },
+    { "Jenis Laporan": "Periode Akhir", "Jumlah Data": to || "Semua tanggal" },
+    { "Jenis Laporan": "Dibuat Oleh", "Jumlah Data": profile.full_name || user.email || "-" },
   ];
   const summarySheet = XLSX.utils.json_to_sheet(summary);
   styleSheet(summarySheet, summary);
