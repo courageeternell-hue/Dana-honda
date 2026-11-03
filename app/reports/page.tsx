@@ -33,8 +33,8 @@ export default async function Reports({ searchParams }: { searchParams?: { from?
           <div className="formgrid">
             <label>Tanggal mulai<input type="date" name="from" defaultValue={searchParams?.from || ""}/></label>
             <label>Tanggal akhir<input type="date" name="to" defaultValue={searchParams?.to || ""}/></label>
-            <label>Status Prospek<select name="prospectStatus" defaultValue={searchParams?.prospectStatus || ""}><option value="">Semua status</option><option value="Baru">Baru</option><option value="Follow Up">Follow Up</option><option value="Deal">Deal</option><option value="Tidak Deal">Tidak Deal</option></select></label>
-            <label>Status SPK<select name="spkStatus" defaultValue={searchParams?.spkStatus || ""}><option value="">Semua status</option><option value="Proses">Proses</option><option value="Approve">Approve</option><option value="Reject">Reject</option><option value="Cancel">Cancel</option></select></label>
+            <label>Status Prospek<select name="prospectStatus" defaultValue={searchParams?.prospectStatus || ""}><option value="">Semua status</option><option value="Belum Respon">Belum Respon</option><option value="Follow Up">Follow Up</option><option value="Tertarik">Tertarik</option><option value="Deal">Deal</option><option value="Tidak Berminat">Tidak Berminat</option></select></label>
+            <label>Status SPK<select name="spkStatus" defaultValue={searchParams?.spkStatus || ""}><option value="">Semua status</option><option value="Proses">Proses</option><option value="Jual">Jual</option><option value="Indent">Indent</option><option value="Tolak">Tolak</option><option value="Batal">Batal</option></select></label>
             {elevated && <label>Sales
               <select name="sales" defaultValue={searchParams?.sales || ""}>
                 <option value="">Semua Sales</option>
