@@ -13,6 +13,7 @@ type Person = {
   supervisor_id?: string | null;
 };
 type Supervisor = { id: string; full_name: string };
+// Supervisor choices are supplied by the server page for Super Admin team assignment.
 
 export default function UsersManager({ users, canChangeRole, supervisors = [] }: {
   users: Person[]; canChangeRole: boolean; supervisors?: Supervisor[];
