@@ -41,6 +41,7 @@ $$;
 -- change role or account state directly through the client Data API.
 drop policy if exists "supervisor manages profiles" on public.profiles;
 drop policy if exists "active supervisor manages profiles" on public.profiles;
+drop policy if exists "active supervisor manages profiles" on public.profiles;
 drop policy if exists "profiles self or supervisor read" on public.profiles;
 drop policy if exists "profiles self or active supervisor read" on public.profiles;
 drop policy if exists "profiles self or management read" on public.profiles;
