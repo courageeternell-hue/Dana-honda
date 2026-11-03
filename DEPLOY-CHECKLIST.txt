@@ -1,0 +1,17 @@
+CHECKLIST DEPLOY HONDA SALES REPORT
+
+[ ] Buat project Supabase
+[ ] Jalankan supabase/schema.sql
+[ ] Buat private Storage bucket: daily-reports
+[ ] Buat 5 akun sales dan 1 supervisor di Supabase Auth
+[ ] Masukkan UUID akun ke tabel profiles
+[ ] Set role supervisor hanya untuk akun supervisor
+[ ] Isi environment variables di Vercel
+[ ] Deploy project
+[ ] Uji login keenam akun
+[ ] Uji data isolation dengan dua akun sales
+[ ] Uji supervisor dapat melihat seluruh data
+[ ] Uji input prospek dan SPK
+[ ] Uji export Excel
+[ ] Uji cron pukul 17.00 WIB
+[ ] Backup database sebelum dipakai sungguhan
