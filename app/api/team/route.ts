@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
   if (createError || !created.user) {
     const message = createError?.message || "Akun gagal dibuat.";
     const status = /already|registered|exists/i.test(message) ? 409 : 400;
-    return NextResponse.json({ error: status === 409 ? "Email tersebut sudah terdaftar." : message }, { status });
+    return NextResponse.json({ error: status === 409 ? "Email tersebut sudah terdaftar." : "Akun gagal dibuat. Periksa data dan konfigurasi, lalu coba lagi." }, { status });
   }
   const { error: profileError } = await ctx.admin.from("profiles").upsert({
     id: created.user.id, full_name: fullName, email, role, is_active: true, supervisor_id: supervisorId
@@ -89,6 +89,11 @@ export async function PATCH(request: NextRequest) {
   if (body.role !== undefined) {
     if (ctx.actor.role !== "super_admin") return NextResponse.json({ error: "Hanya Super Admin yang dapat mengubah role." }, { status: 403 });
     if (!["sales", "supervisor"].includes(body.role)) return NextResponse.json({ error: "Role tujuan tidak valid." }, { status: 400 });
+    if (target.role === "supervisor" && body.role === "sales") {
+      const { count, error: countError } = await ctx.admin.from("profiles").select("id", { count: "exact", head: true }).eq("supervisor_id", id);
+      if (countError) return NextResponse.json({ error: "Tidak dapat memeriksa anggota tim. Coba lagi." }, { status: 500 });
+      if ((count || 0) > 0) return NextResponse.json({ error: "Pindahkan semua Sales ke Supervisor lain sebelum mengubah role akun ini." }, { status: 409 });
+    }
     changes.role = body.role;
     if (body.role === "supervisor") changes.supervisor_id = null;
   }
