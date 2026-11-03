@@ -107,7 +107,8 @@ export async function PATCH(request: NextRequest) {
     changes.full_name = name;
   }
   if (body.supervisor_id !== undefined) {
-    if (ctx.actor.role !== "super_admin" || target.role !== "sales") {
+    const resultingRole = body.role !== undefined ? body.role : target.role;
+    if (ctx.actor.role !== "super_admin" || resultingRole !== "sales" || target.role !== "sales") {
       return NextResponse.json({ error: "Hanya Super Admin yang dapat memindahkan Sales antar tim." }, { status: 403 });
     }
     if (body.supervisor_id === null || body.supervisor_id === "") changes.supervisor_id = null;
