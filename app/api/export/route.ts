@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
     if (from) query = query.gte("spk_date", from);
     if (to) query = query.lte("spk_date", to);
     if (elevated && salesId) query = query.eq("user_id", salesId);
+    if (spkStatus) query = query.eq("status", spkStatus);
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: "Data SPK gagal dibaca." }, { status: 500 });
     const rows = (data || []).map((row, index) => ({
