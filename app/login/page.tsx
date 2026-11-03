@@ -1,7 +1,7 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -9,7 +9,12 @@ export default function Login() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const router = useRouter();
-  const params = useSearchParams();
+  const [queryError, setQueryError] = useState("");
+  useEffect(() => {
+    const value = new URLSearchParams(window.location.search).get("error");
+    if (value === "not-allowed") setQueryError("Akun Google ini bukan Super Admin yang diizinkan.");
+    else if (value) setQueryError("Proses login Google tidak berhasil. Coba lagi.");
+  }, []);
 
   async function googleLogin() {
     if (busy) return;
@@ -56,12 +61,11 @@ export default function Login() {
     } finally { setBusy(false); }
   }
 
-  const queryError = params.get("error");
   return <main className="login card">
     <div className="brand"><div className="logo">H</div><div>HONDA SALES REPORT<div className="muted">Sales Team Management</div></div></div>
     <h1>Selamat datang</h1>
     <p className="muted">Sales dan Supervisor masuk dengan akun yang didaftarkan. Google hanya untuk Super Admin utama.</p>
-    {queryError && <div className="alert" role="alert">{queryError === "not-allowed" ? "Akun Google ini bukan Super Admin yang diizinkan." : "Proses login Google tidak berhasil. Coba lagi."}</div>}
+    {queryError && <div className="alert" role="alert">{queryError}</div>}
     <button type="button" className="btn" style={{width:"100%",marginBottom:18}} disabled={busy} onClick={googleLogin}>
       {busy ? "Menghubungkan..." : "Lanjutkan dengan Google · Super Admin"}
     </button>
