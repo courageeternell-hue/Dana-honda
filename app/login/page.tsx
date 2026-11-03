@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -9,71 +9,63 @@ export default function Login() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const router = useRouter();
+  const params = useSearchParams();
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function googleLogin() {
     if (busy) return;
-    setBusy(true);
-    setError("");
-
+    setBusy(true); setError("");
     try {
       const supabase = createClient();
-      const normalizedEmail = email.trim().toLowerCase();
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email: normalizedEmail,
-        password,
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: window.location.origin + "/auth/google-callback" },
       });
-
-      if (authError) {
-        const code = (authError as { code?: string }).code;
-        if (code === "email_not_confirmed") {
-          setError("Email akun belum dikonfirmasi. Hubungi supervisor untuk bantuan.");
-        } else if (code === "invalid_credentials" || /invalid login credentials/i.test(authError.message)) {
-          setError("Email atau password salah. Pastikan memakai akun yang dibuat supervisor dan password yang benar.");
-        } else if (/network|fetch/i.test(authError.message)) {
-          setError("Koneksi ke server bermasalah. Periksa internet lalu coba lagi.");
-        } else {
-          setError("Login belum berhasil. Coba lagi beberapa saat atau hubungi supervisor.");
-        }
-        return;
-      }
-
-      if (!data.user) {
-        setError("Sesi login belum terbentuk. Silakan coba lagi.");
-        return;
-      }
-
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("is_active")
-        .eq("id", data.user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        await supabase.auth.signOut();
-        setError("Profil akun tidak dapat diverifikasi. Hubungi supervisor.");
-        return;
-      }
-
-      if (!profile || profile.is_active === false) {
-        await supabase.auth.signOut();
-        setError("Akun belum aktif atau belum terdaftar di sistem. Hubungi supervisor.");
-        return;
-      }
-
-      router.replace("/");
-      router.refresh();
+      if (error) throw error;
     } catch {
-      setError("Tidak dapat terhubung ke server. Periksa koneksi internet lalu coba lagi.");
-    } finally {
+      setError("Login Google belum dapat dimulai. Periksa konfigurasi Google Provider di Supabase.");
       setBusy(false);
     }
   }
 
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (busy) return;
+    setBusy(true); setError("");
+    try {
+      const supabase = createClient();
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(), password,
+      });
+      if (authError) {
+        setError(/invalid login credentials/i.test(authError.message)
+          ? "Email atau password salah."
+          : "Login belum berhasil. Periksa data akun atau hubungi Super Admin.");
+        return;
+      }
+      if (!data.user) { setError("Sesi login belum terbentuk. Coba lagi."); return; }
+      const { data: profile, error: profileError } = await supabase.from("profiles")
+        .select("role,is_active").eq("id", data.user.id).maybeSingle();
+      if (profileError || !profile || profile.is_active === false) {
+        await supabase.auth.signOut();
+        setError("Email ini belum terdaftar atau akun sedang nonaktif. Hubungi Super Admin.");
+        return;
+      }
+      router.replace("/"); router.refresh();
+    } catch {
+      setError("Tidak dapat terhubung ke server. Periksa koneksi internet.");
+    } finally { setBusy(false); }
+  }
+
+  const queryError = params.get("error");
   return <main className="login card">
     <div className="brand"><div className="logo">H</div><div>HONDA SALES REPORT<div className="muted">Sales Team Management</div></div></div>
     <h1>Selamat datang</h1>
-    <p className="muted">Masuk untuk melanjutkan pengelolaan prospek dan SPK tim Honda.</p>
+    <p className="muted">Sales dan Supervisor masuk dengan akun yang didaftarkan. Google hanya untuk Super Admin utama.</p>
+    {queryError && <div className="alert" role="alert">{queryError === "not-allowed" ? "Akun Google ini bukan Super Admin yang diizinkan." : "Proses login Google tidak berhasil. Coba lagi."}</div>}
+    <button type="button" className="btn" style={{width:"100%",marginBottom:18}} disabled={busy} onClick={googleLogin}>
+      {busy ? "Menghubungkan..." : "Lanjutkan dengan Google · Super Admin"}
+    </button>
+    <div className="muted" style={{textAlign:"center",marginBottom:18}}>— atau login Sales / Supervisor —</div>
     <form onSubmit={submit}>
       <div className="formgrid">
         <label>Email<input type="email" autoComplete="username" required value={email} onChange={e => setEmail(e.target.value)} placeholder="nama@email.com" /></label>
@@ -82,6 +74,7 @@ export default function Login() {
       {error && <div className="alert" role="alert">{error}</div>}
       <div className="actions"><button className="btn primary" disabled={busy}>{busy ? "Memproses..." : "Masuk ke Dashboard"}</button></div>
     </form>
-    <p className="muted" style={{marginTop:14}}><a href="/forgot-password">Lupa password?</a></p>\n    <p className="muted" style={{marginTop:8}}>Akun dibuat oleh supervisor. Pendaftaran publik dinonaktifkan.</p>
+    <p className="muted" style={{marginTop:14}}><a href="/forgot-password">Lupa password?</a></p>
+    <p className="muted" style={{marginTop:8}}>Akun hanya dapat dibuat oleh pengelola yang berwenang.</p>
   </main>;
 }
