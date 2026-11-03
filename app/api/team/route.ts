@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceKey) {
-    return NextResponse.json({ error: "Konfigurasi server belum lengkap. Supervisor perlu mengatur SUPABASE_SERVICE_ROLE_KEY di Vercel." }, { status: 500 });
+    return NextResponse.json({ error: "Konfigurasi server belum lengkap. Periksa SUPABASE_SERVICE_ROLE_KEY di Vercel." }, { status: 500 });
   }
 
   let body: { full_name?: string; email?: string; password?: string };
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   if (fullName.length < 2 || fullName.length > 80) {
     return NextResponse.json({ error: "Nama sales harus 2–80 karakter." }, { status: 400 });
   }
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || email.length > 254) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     return NextResponse.json({ error: "Format email tidak valid." }, { status: 400 });
   }
   if (password.length < 8 || password.length > 72) {
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
   if (profileError) {
     await admin.auth.admin.deleteUser(created.user.id);
-    return NextResponse.json({ error: "Akun Auth dibuat tetapi profil gagal disimpan. Proses dibatalkan dan akun dibersihkan." }, { status: 500 });
+    return NextResponse.json({ error: "Profil gagal disimpan. Pembuatan akun dibatalkan." }, { status: 500 });
   }
 
   return NextResponse.json({
