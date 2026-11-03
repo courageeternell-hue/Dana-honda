@@ -53,8 +53,16 @@ as $$
    )
  );
 $$;
-revoke all on function public.can_access_sales_data(uuid) from public;
+revoke all on function public.can_access_sales_data(uuid) from public, anon;
 grant execute on function public.can_access_sales_data(uuid) to authenticated;
+
+-- SECURITY DEFINER helpers must not be callable by anonymous/public roles.
+revoke all on function public.is_super_admin() from public, anon;
+revoke all on function public.is_supervisor() from public, anon;
+revoke all on function public.is_active_user() from public, anon;
+grant execute on function public.is_super_admin() to authenticated;
+grant execute on function public.is_supervisor() to authenticated;
+grant execute on function public.is_active_user() to authenticated;
 
 drop policy if exists "active users delete permitted prospects" on public.prospects;
 drop policy if exists "active users read permitted prospects" on public.prospects;
@@ -79,7 +87,4 @@ create policy "hierarchy delete spk" on public.spk_records for delete using (pub
 drop policy if exists "active users read permitted activity logs" on public.activity_logs;
 drop policy if exists "hierarchy read activity logs" on public.activity_logs;
 create policy "hierarchy read activity logs" on public.activity_logs for select
-using (actor_id=auth.uid() or public.is_super_admin() or exists (
-  select 1 from public.profiles sales where sales.id=activity_logs.actor_id
-    and sales.role='sales' and sales.supervisor_id=auth.uid()
-));
+using (public.can_access_sales_data(actor_id));
