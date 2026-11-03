@@ -3,12 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-export default function SalesAccountForm({ allowSupervisor = false }: { allowSupervisor?: boolean }) {
+type Supervisor = { id: string; full_name: string };
+
+export default function SalesAccountForm({ allowSupervisor = false, supervisors = [] }: { allowSupervisor?: boolean; supervisors?: Supervisor[] }) {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("sales");
+  const [supervisorId, setSupervisorId] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [busy, setBusy] = useState(false);
@@ -20,12 +23,12 @@ export default function SalesAccountForm({ allowSupervisor = false }: { allowSup
     try {
       const response = await fetch("/api/team", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ full_name: fullName, email, password, role }),
+        body: JSON.stringify({ full_name: fullName, email, password, role, ...(role === "sales" && supervisorId ? { supervisor_id: supervisorId } : {}) }),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Akun gagal dibuat.");
       setSuccess("Akun berhasil dibuat. Sampaikan email dan password awal secara pribadi.");
-      setFullName(""); setEmail(""); setPassword(""); setRole("sales");
+      setFullName(""); setEmail(""); setPassword(""); setRole("sales"); setSupervisorId("");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Tidak dapat terhubung ke server.");
@@ -44,6 +47,12 @@ export default function SalesAccountForm({ allowSupervisor = false }: { allowSup
           <option value="sales">Sales</option>
           {allowSupervisor && <option value="supervisor">Supervisor</option>}
         </select></label>
+        {allowSupervisor && role === "sales" && <label>Masukkan ke tim Supervisor
+          <select value={supervisorId} onChange={e => setSupervisorId(e.target.value)}>
+            <option value="">Belum ditentukan</option>
+            {supervisors.map(item => <option key={item.id} value={item.id}>{item.full_name}</option>)}
+          </select>
+        </label>}
       </div>
       {error && <div className="alert" role="alert">{error}</div>}
       {success && <div className="alert success" role="status">{success}</div>}
