@@ -1,0 +1,14 @@
+"use client";
+import Header from "@/components/Header";
+import { createClient } from "@/lib/supabase/client";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+export default function EditSPK(){
+ const params=useParams<{id:string}>();const router=useRouter();const [v,setV]=useState<any>(null);const [err,setErr]=useState("");const [saving,setSaving]=useState(false);
+ useEffect(()=>{let alive=true;(async()=>{const s=createClient();const {data:{user}}=await s.auth.getUser();if(!user){router.replace("/login");return;}const {data,error}=await s.from("spk_records").select("*").eq("id",params.id).single();if(!alive)return;if(error||!data){setErr(error?.message||"SPK tidak ditemukan.");return;}setV(data);})();return()=>{alive=false};},[params.id,router]);
+ function ch(e:any){setV((old:any)=>({...old,[e.target.name]:e.target.value}));}
+ async function save(e:any){e.preventDefault();setSaving(true);setErr("");const s=createClient();const {data:{user}}=await s.auth.getUser();if(!user){router.replace("/login");return;}const {error}=await s.from("spk_records").update({spk_date:v.spk_date,customer_name:v.customer_name,phone:v.phone,address:v.address||null,source:v.source||null,unit_type:v.unit_type,dp_cash:v.dp_cash||null,leasing:v.leasing||null,notes:v.notes||null,status:v.status}).eq("id",params.id);setSaving(false);if(error)setErr(error.message);else router.push("/spk/"+params.id);}
+ return <><Header/><main className="shell"><h1>Edit SPK</h1>{err&&<div className="alert">{err}</div>}{v&&<form className="card" onSubmit={save}><div className="formgrid">
+ <label>Tanggal SPK<input type="date" name="spk_date" required value={v.spk_date||""} onChange={ch}/></label><label>Nama Konsumen<input name="customer_name" required value={v.customer_name||""} onChange={ch}/></label><label>No. HP<input name="phone" required value={v.phone||""} onChange={ch}/></label><label>Alamat<input name="address" value={v.address||""} onChange={ch}/></label><label>Sumber<input name="source" value={v.source||""} onChange={ch}/></label><label>Type Unit<input name="unit_type" required value={v.unit_type||""} onChange={ch}/></label><label>DP / Cash<input name="dp_cash" value={v.dp_cash||""} onChange={ch}/></label><label>Leasing<input name="leasing" value={v.leasing||""} onChange={ch}/></label><label>Status<select name="status" value={v.status||"Proses"} onChange={ch}>{["Jual","Proses","Indent","Tolak","Batal"].map(x=><option key={x}>{x}</option>)}</select></label><label>Keterangan<textarea name="notes" value={v.notes||""} onChange={ch}/></label>
+ </div><div className="actions"><button className="btn primary" disabled={saving}>{saving?"Menyimpan...":"Simpan Perubahan"}</button><button type="button" className="btn" onClick={()=>router.back()}>Batal</button></div></form>}</main></>;
+}
