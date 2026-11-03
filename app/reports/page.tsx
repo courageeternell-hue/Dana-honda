@@ -2,7 +2,7 @@ import Header from "@/components/Header";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
-export default async function Reports({ searchParams }: { searchParams?: { from?: string; to?: string; sales?: string } }) {
+export default async function Reports({ searchParams }: { searchParams?: { from?: string; to?: string; sales?: string; prospectStatus?: string; spkStatus?: string } }) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
@@ -17,6 +17,8 @@ export default async function Reports({ searchParams }: { searchParams?: { from?
   if (searchParams?.from) query.set("from", searchParams.from);
   if (searchParams?.to) query.set("to", searchParams.to);
   if (searchParams?.sales) query.set("sales", searchParams.sales);
+  if (searchParams?.prospectStatus) query.set("prospectStatus", searchParams.prospectStatus);
+  if (searchParams?.spkStatus) query.set("spkStatus", searchParams.spkStatus);
   const suffix = query.toString() ? "&" + query.toString() : "";
   const scope = elevated ? "seluruh tim atau sales yang dipilih" : "data milik akun sendiri";
 
@@ -31,6 +33,8 @@ export default async function Reports({ searchParams }: { searchParams?: { from?
           <div className="formgrid">
             <label>Tanggal mulai<input type="date" name="from" defaultValue={searchParams?.from || ""}/></label>
             <label>Tanggal akhir<input type="date" name="to" defaultValue={searchParams?.to || ""}/></label>
+            <label>Status Prospek<select name="prospectStatus" defaultValue={searchParams?.prospectStatus || ""}><option value="">Semua status</option><option value="Baru">Baru</option><option value="Follow Up">Follow Up</option><option value="Deal">Deal</option><option value="Tidak Deal">Tidak Deal</option></select></label>
+            <label>Status SPK<select name="spkStatus" defaultValue={searchParams?.spkStatus || ""}><option value="">Semua status</option><option value="Proses">Proses</option><option value="Approve">Approve</option><option value="Reject">Reject</option><option value="Cancel">Cancel</option></select></label>
             {elevated && <label>Sales
               <select name="sales" defaultValue={searchParams?.sales || ""}>
                 <option value="">Semua Sales</option>
