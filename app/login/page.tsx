@@ -82,6 +82,6 @@ export default function Login() {
       {error && <div className="alert" role="alert">{error}</div>}
       <div className="actions"><button className="btn primary" disabled={busy}>{busy ? "Memproses..." : "Masuk ke Dashboard"}</button></div>
     </form>
-    <p className="muted" style={{marginTop:18}}>Akun dibuat oleh supervisor. Pendaftaran publik dinonaktifkan.</p>
+    <p className="muted" style={{marginTop:14}}><a href="/forgot-password">Lupa password?</a></p>\n    <p className="muted" style={{marginTop:8}}>Akun dibuat oleh supervisor. Pendaftaran publik dinonaktifkan.</p>
   </main>;
 }
