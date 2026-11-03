@@ -69,6 +69,11 @@ export async function PATCH(request: NextRequest) {
   const { data: target } = await ctx.admin.from("profiles").select("id,role,is_active,full_name,email").eq("id", id).maybeSingle();
   if (!target) return NextResponse.json({ error: "Pengguna tidak ditemukan." }, { status: 404 });
   if (target.role === "super_admin") return NextResponse.json({ error: "Akun Super Admin utama dilindungi." }, { status: 403 });
+  // A Supervisor may manage Sales accounts only, including name and active status.
+  // This check must run before processing any requested field to prevent privilege bypass.
+  if (ctx.actor.role === "supervisor" && target.role !== "sales") {
+    return NextResponse.json({ error: "Supervisor hanya dapat mengelola akun Sales." }, { status: 403 });
+  }
 
   const changes: Record<string, unknown> = {};
   if (body.role !== undefined) {
