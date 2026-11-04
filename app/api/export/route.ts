@@ -138,6 +138,7 @@ export async function GET(request: NextRequest) {
       const { data: batch, error } = await query.range(offset, offset + 999);
       if (error) return NextResponse.json({ error: "Data SPK gagal dibaca." }, { status: 500 });
       allRows.push(...(batch || []));
+      if (allRows.length > 25000) return NextResponse.json({ error: "Laporan melebihi batas 25.000 baris. Persempit periode atau filter terlebih dahulu." }, { status: 413 });
       if (!batch || batch.length < 1000) break;
       offset += 1000;
     }
