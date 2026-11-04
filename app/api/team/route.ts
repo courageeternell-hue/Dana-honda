@@ -97,6 +97,7 @@ export async function PATCH(request: NextRequest) {
       const { count, error: countError } = await ctx.admin.from("profiles").select("id", { count: "exact", head: true }).eq("supervisor_id", id);
       if (countError) return NextResponse.json({ error: "Tidak dapat memeriksa anggota tim. Coba lagi." }, { status: 500 });
       if ((count || 0) > 0) return NextResponse.json({ error: "Pindahkan semua Sales ke Supervisor lain sebelum mengubah role akun ini." }, { status: 409 });
+      if (!body.supervisor_id) return NextResponse.json({ error: "Pilih Supervisor aktif untuk akun yang akan diubah menjadi Sales." }, { status: 400 });
     }
     changes.role = body.role;
     if (body.role === "supervisor") changes.supervisor_id = null;
@@ -117,8 +118,9 @@ export async function PATCH(request: NextRequest) {
   }
   if (body.supervisor_id !== undefined) {
     const resultingRole = body.role !== undefined ? body.role : target.role;
-    if (ctx.actor.role !== "super_admin" || resultingRole !== "sales" || target.role !== "sales") {
-      return NextResponse.json({ error: "Hanya Super Admin yang dapat memindahkan Sales antar tim." }, { status: 403 });
+    const isSalesAssignment = resultingRole === "sales" && (target.role === "sales" || (target.role === "supervisor" && body.role === "sales"));
+    if (ctx.actor.role !== "super_admin" || !isSalesAssignment) {
+      return NextResponse.json({ error: "Hanya Super Admin yang dapat menetapkan Supervisor untuk Sales." }, { status: 403 });
     }
     if (body.supervisor_id === null || body.supervisor_id === "") {
       return NextResponse.json({ error: "Sales harus tetap memiliki Supervisor aktif. Pilih tim tujuan terlebih dahulu." }, { status: 400 });
