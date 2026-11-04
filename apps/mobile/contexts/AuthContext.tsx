@@ -96,12 +96,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setSession(data.session);
       setLoading(true);
-      awaitProfile(data.session.user.id);
+      void loadProfile(data.session.user.id);
     });
-
-    const awaitProfile = (userId: string) => {
-      void loadProfile(userId);
-    };
 
     return () => {
       mounted = false;
