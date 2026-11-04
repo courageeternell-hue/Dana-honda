@@ -47,7 +47,7 @@ export default function Header() {
         {navItems.map(item => <Link key={item.href} href={item.href}
           className={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/")) ? "active" : ""}>{item.label}</Link>)}
       </nav>}
-      {user && <div className="muted" style={{whiteSpace:"nowrap"}}>{profile?.full_name || user.email} · {profile?.role || "sales"}</div>}
+      {user && <div className="user-pill"><span className="user-dot" />{profile?.full_name || user.email}<span className="user-role">{profile?.role || "sales"}</span></div>}
     </div>
   </header>;
 }
