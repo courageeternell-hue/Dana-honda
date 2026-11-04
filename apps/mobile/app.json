@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Honda Sales",
+    "slug": "honda-sales-mobile",
+    "scheme": "hondasales",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.danz.hondasales",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "backgroundColor": "#5B4BDB"
+      }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
