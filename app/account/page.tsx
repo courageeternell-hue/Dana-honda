@@ -20,7 +20,7 @@ export default async function Account() {
 
     <p className="section-label">MENU AKUN</p>
     <section className="menu-card">
-      {isSupervisor && <Link href="/reports" className="profile-menu-link">
+      {isSupervisor && <Link href="/" className="profile-menu-link">
         <span className="menu-icon purple"><LayoutDashboard size={20}/></span><span className="menu-copy"><strong>Dasbor Admin & Supervisor</strong><small>Kelola laporan dan pantau performa tim</small></span><ChevronRight size={19} className="menu-chevron"/>
       </Link>}
       {isSupervisor && <Link href="/reports" className="profile-menu-link">
