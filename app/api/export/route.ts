@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
   let totalSpk = 0;
 
   if (type === "prospects" || type === "all") {
-    let query = supabase.from("prospects").select("id,user_id,prospect_date,customer_name,phone,source,unit_interest,status,deal_status,follow_up,lead_response,spk_created,notes").order("prospect_date", { ascending: true });
+    let query = supabase.from("prospects").select("id,user_id,prospect_date,customer_name,phone,source,unit_interest,status,deal_status,follow_up,lead_response,spk_created,notes").order("prospect_date", { ascending: true }).order("id", { ascending: true });
     if (from) query = query.gte("prospect_date", from);
     if (to) query = query.lte("prospect_date", to);
     if (elevated && salesId) query = query.eq("user_id", salesId);
@@ -98,6 +98,7 @@ export async function GET(request: NextRequest) {
       const { data: batch, error } = await query.range(offset, offset + 999);
       if (error) return NextResponse.json({ error: "Data prospek gagal dibaca." }, { status: 500 });
       allRows.push(...(batch || []));
+      if (allRows.length > 25000) return NextResponse.json({ error: "Laporan melebihi batas 25.000 baris. Persempit periode atau filter terlebih dahulu." }, { status: 413 });
       if (!batch || batch.length < 1000) break;
       offset += 1000;
     }
@@ -125,7 +126,7 @@ export async function GET(request: NextRequest) {
   }
 
   if (type === "spk" || type === "all") {
-    let query = supabase.from("spk_records").select("id,user_id,spk_date,customer_name,phone,address,source,unit_type,dp_cash,leasing,status,notes").order("spk_date", { ascending: true });
+    let query = supabase.from("spk_records").select("id,user_id,spk_date,customer_name,phone,address,source,unit_type,dp_cash,leasing,status,notes").order("spk_date", { ascending: true }).order("id", { ascending: true });
     if (from) query = query.gte("spk_date", from);
     if (to) query = query.lte("spk_date", to);
     if (elevated && salesId) query = query.eq("user_id", salesId);
