@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Header from "@/components/Header";
+import OnboardingGuide from "@/components/OnboardingGuide";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -45,6 +46,7 @@ export default async function Home() {
   return <>
     <Header />
     <main className="shell">
+      <OnboardingGuide userId={user.id} role={profile.role as "sales" | "supervisor" | "super_admin"} />
       <section className="toolbar">
         <div>
           <div className="muted">DANA HONDA / RINGKASAN PENJUALAN</div>
