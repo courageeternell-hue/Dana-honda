@@ -1,0 +1,37 @@
+name: Native mobile checks
+
+on:
+  push:
+    branches:
+      - native-mobile-app
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/native-mobile-checks.yml"
+  pull_request:
+    branches:
+      - native-mobile-app
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/native-mobile-checks.yml"
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+      - name: Install dependencies
+        run: npm install
+      - name: TypeScript check
+        run: npm run typecheck
+      - name: Expo dependency check
+        run: npx expo-doctor
