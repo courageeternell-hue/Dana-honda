@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       else supabase.auth.stopAutoRefresh();
     };
 
-    handleAppState(AppState.currentState);
+    handleAppState(AppState.currentState ?? "active");
     const appStateSubscription = AppState.addEventListener("change", handleAppState);
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
