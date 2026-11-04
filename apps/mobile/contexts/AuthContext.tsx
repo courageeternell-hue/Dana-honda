@@ -8,6 +8,7 @@ export type UserProfile = {
   id: string;
   full_name: string;
   email: string | null;
+  avatar_url: string | null;
   role: UserRole;
   is_active: boolean;
 };
@@ -26,7 +27,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 async function getProfile(userId: string): Promise<UserProfile> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, email, role, is_active")
+    .select("id, full_name, email, avatar_url, role, is_active")
     .eq("id", userId)
     .single();
 
