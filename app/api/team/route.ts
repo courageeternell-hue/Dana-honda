@@ -99,6 +99,11 @@ export async function PATCH(request: NextRequest) {
   }
   if (body.is_active !== undefined) {
     if (typeof body.is_active !== "boolean") return NextResponse.json({ error: "Status akun tidak valid." }, { status: 400 });
+    if (target.role === "supervisor" && body.is_active === false) {
+      const { count, error: countError } = await ctx.admin.from("profiles").select("id", { count: "exact", head: true }).eq("supervisor_id", id);
+      if (countError) return NextResponse.json({ error: "Tidak dapat memeriksa anggota tim. Coba lagi." }, { status: 500 });
+      if ((count || 0) > 0) return NextResponse.json({ error: "Pindahkan semua Sales ke Supervisor aktif lain sebelum menonaktifkan akun ini." }, { status: 409 });
+    }
     changes.is_active = body.is_active;
   }
   if (body.full_name !== undefined) {
