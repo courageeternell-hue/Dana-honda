@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 type Metrics = { prospects: number; spk: number; closing: number; prospectTarget: number; spkTarget: number };
 const empty: Metrics = { prospects: 0, spk: 0, closing: 0, prospectTarget: 0, spkTarget: 0 };
 
-function Stat({ label, value, note }: { label: string; value: string; note: string }) {
+function dateKey(date: Date) {\n  const y = date.getFullYear();\n  const m = String(date.getMonth() + 1).padStart(2, "0");\n  const d = String(date.getDate()).padStart(2, "0");\n  return `${y}-${m}-${d}`;\n}\n\nfunction Stat({ label, value, note }: { label: string; value: string; note: string }) {
   return <View style={s.stat}><Text style={s.statLabel}>{label}</Text><Text style={s.statValue}>{value}</Text><Text style={s.statNote}>{note}</Text></View>;
 }
 
@@ -21,13 +21,13 @@ export default function HomeScreen() {
     if (!profile) return;
     setError("");
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().slice(0, 10);
+    const monthStart = dateKey(new Date(now.getFullYear(), now.getMonth(), 1));
+    const nextMonth = dateKey(new Date(now.getFullYear(), now.getMonth() + 1, 1));
     try {
       const [prospects, spk, closing, targets] = await Promise.all([
-        supabase.from("prospects").select("id", { count: "exact", head: true }),
-        supabase.from("spk_records").select("id", { count: "exact", head: true }),
-        supabase.from("spk_records").select("id", { count: "exact", head: true }).eq("status", "Jual"),
+        supabase.from("prospects").select("id", { count: "exact", head: true }).gte("prospect_date", monthStart).lt("prospect_date", nextMonth),
+        supabase.from("spk_records").select("id", { count: "exact", head: true }).gte("spk_date", monthStart).lt("spk_date", nextMonth),
+        supabase.from("spk_records").select("id", { count: "exact", head: true }).eq("status", "Jual").gte("spk_date", monthStart).lt("spk_date", nextMonth),
         supabase.from("sales_targets").select("prospect_target, spk_target").gte("target_month", monthStart).lt("target_month", nextMonth),
       ]);
       const failed = [prospects.error, spk.error, closing.error, targets.error].find(Boolean);
@@ -54,12 +54,12 @@ export default function HomeScreen() {
   return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#5B4BDB" />}>
     <Text style={s.eyebrow}>HONDA SALES</Text><Text style={s.title}>Beranda</Text>
     <Text style={s.subtitle}>Halo, {profile?.full_name || "Sales"}! Ini ringkasan penjualanmu.</Text>
-    <View style={s.hero}><Text style={s.heroSmall}>RINGKASAN PENJUALAN</Text><Text style={s.heroValue}>{profile?.role === "sales" ? "Aktivitas Saya" : "Aktivitas Tim"}</Text><Text style={s.heroText}>Tarik layar ke bawah untuk memperbarui data.</Text></View>
+    <View style={s.hero}><Text style={s.heroSmall}>RINGKASAN BULAN INI</Text><Text style={s.heroValue}>{profile?.role === "sales" ? "Aktivitas Saya" : "Aktivitas Tim"}</Text><Text style={s.heroText}>Tarik layar ke bawah untuk memperbarui data.</Text></View>
     <Text style={s.section}>Ringkasan</Text>
     {loading ? <View style={s.loading}><ActivityIndicator color="#5B4BDB" /><Text style={s.loadingText}>Memuat data...</Text></View> : <>
       <View style={s.grid}>
-        <Stat label="Prospek" value={String(metrics.prospects)} note="Total prospek" />
-        <Stat label="SPK" value={String(metrics.spk)} note="Total SPK" />
+        <Stat label="Prospek" value={String(metrics.prospects)} note="Bulan ini" />
+        <Stat label="SPK" value={String(metrics.spk)} note="Bulan ini" />
         <Stat label="Closing" value={String(metrics.closing)} note="SPK status jual" />
         <Stat label="Target SPK" value={metrics.spkTarget ? String(metrics.spkTarget) : "—"} note="Target bulan ini" />
       </View>
