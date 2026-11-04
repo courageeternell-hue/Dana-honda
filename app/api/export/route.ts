@@ -14,6 +14,24 @@ function safeCell(value: unknown) {
   const normalized = value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, " ");
   return /^[\s]*[=+@-]/.test(normalized) ? "'" + normalized : normalized;
 }
+function parseSource(value: unknown) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return { category: "", detail: "", channel: "", full: "" };
+  const parts = raw.split(" - ").map((part) => part.trim());
+  if (parts[0] === "POS") {
+    return { category: "POS", detail: parts[1] || "", channel: "", full: raw };
+  }
+  if (parts[0] === "Medsos") {
+    return {
+      category: "Medsos",
+      detail: parts[1] || "",
+      channel: parts[1] === "TikTok" ? parts[2] || "" : "",
+      full: raw,
+    };
+  }
+  // Keep historical/custom source labels visible instead of dropping them.
+  return { category: "Lainnya / Data Lama", detail: raw, channel: "", full: raw };
+}
 function styleSheet(sheet: XLSX.WorkSheet, rows: Record<string, unknown>[]) {
   const keys = rows.length ? Object.keys(rows[0]) : [];
   sheet["!cols"] = keys.map((key) => ({ wch: Math.min(34, Math.max(14, key.length + 4)) }));
@@ -73,13 +91,19 @@ export async function GET(request: NextRequest) {
     const ids = Array.from(new Set((data || []).map((row) => row.user_id)));
     const { data: people } = await supabase.from("profiles").select("id,full_name").in("id", ids.length ? ids : [user.id]);
     const names = new Map((people || []).map((person) => [person.id, person.full_name]));
-    const rows = (data || []).map((row, index) => ({
-      "No": index + 1, "Tanggal Prospek": row.prospect_date, "Nama Konsumen": row.customer_name,
-      "Nomor HP": row.phone, "Sumber": row.source || "", "Motor Diminati": row.unit_interest || "",
-      "Status": row.status, "Status Deal": row.deal_status, "Jadwal Follow-up": row.follow_up || "",
-      "Respon Konsumen": row.lead_response || "", "Sudah SPK": row.spk_created ? "Ya" : "Belum",
-      "Catatan": row.notes || "", "Nama Sales": names.get(row.user_id) || "-",
-    })).map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, safeCell(value)])));
+    const rows = (data || []).map((row, index) => {
+      const source = parseSource(row.source);
+      return {
+        "No": index + 1, "Tanggal Prospek": row.prospect_date, "Nama Sales": names.get(row.user_id) || "-",
+        "Nama Konsumen": row.customer_name, "Nomor HP": row.phone,
+        "Kategori Sumber": source.category, "Detail Sumber": source.detail,
+        "Jenis TikTok": source.channel, "Sumber Lengkap": source.full,
+        "Motor Diminati": row.unit_interest || "", "Status Prospek": row.status,
+        "Status Deal": row.deal_status, "Jadwal Follow-up": row.follow_up || "",
+        "Respon Konsumen": row.lead_response || "", "Sudah SPK": row.spk_created ? "Ya" : "Belum",
+        "Catatan": row.notes || "",
+      };
+    }).map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, safeCell(value)])));
     totalProspects = rows.length;
     const sheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ "Informasi": "Tidak ada data pada periode yang dipilih." }]);
     styleSheet(sheet, rows);
@@ -105,12 +129,17 @@ export async function GET(request: NextRequest) {
     const ids = Array.from(new Set((data || []).map((row) => row.user_id)));
     const { data: people } = await supabase.from("profiles").select("id,full_name").in("id", ids.length ? ids : [user.id]);
     const names = new Map((people || []).map((person) => [person.id, person.full_name]));
-    const rows = (data || []).map((row, index) => ({
-      "No": index + 1, "Tanggal SPK": row.spk_date, "Nama Sales": names.get(row.user_id) || "-",
-      "Nama Konsumen": row.customer_name, "Nomor HP": row.phone, "Alamat": row.address || "",
-      "Sumber": row.source || "", "Tipe Motor": row.unit_type, "DP / Harga Cash": row.dp_cash || "",
-      "Leasing": row.leasing || "", "Status SPK": row.status, "Catatan": row.notes || "",
-    })).map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, safeCell(value)])));
+    const rows = (data || []).map((row, index) => {
+      const source = parseSource(row.source);
+      return {
+        "No": index + 1, "Tanggal SPK": row.spk_date, "Nama Sales": names.get(row.user_id) || "-",
+        "Nama Konsumen": row.customer_name, "Nomor HP": row.phone, "Alamat": row.address || "",
+        "Kategori Sumber": source.category, "Detail Sumber": source.detail,
+        "Jenis TikTok": source.channel, "Sumber Lengkap": source.full,
+        "Tipe Motor": row.unit_type, "DP / Harga Cash": row.dp_cash || "",
+        "Leasing": row.leasing || "", "Status SPK": row.status, "Catatan": row.notes || "",
+      };
+    }).map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, safeCell(value)])));
     totalSpk = rows.length;
     const sheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ "Informasi": "Tidak ada data pada periode yang dipilih." }]);
     styleSheet(sheet, rows);
