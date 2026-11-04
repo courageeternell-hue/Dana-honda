@@ -36,8 +36,20 @@ drop policy if exists "profiles update own" on public.profiles;
 drop policy if exists "profiles insert own" on public.profiles;
 drop policy if exists "profiles delete own" on public.profiles;
 
-update public.profiles p set role='super_admin', is_active=true, email='courageeternell@gmail.com'
-from auth.users u where p.id=u.id and lower(u.email)='courageeternell@gmail.com';
+-- Ensure the designated Google Super Admin has an application profile.
+-- The Auth identity already exists; preserve its UUID and create/update only its profile.
+insert into public.profiles (id, full_name, role, email, is_active)
+select u.id,
+       coalesce(nullif(trim(u.raw_user_meta_data->>'full_name'), ''), 'Super Admin'),
+       'super_admin',
+       lower(u.email),
+       true
+from auth.users u
+where lower(u.email)='courageeternell@gmail.com'
+on conflict (id) do update
+set role='super_admin',
+    email=excluded.email,
+    is_active=true;
 
 create or replace function public.can_access_sales_data(target_user_id uuid)
 returns boolean language sql stable security definer set search_path=pg_catalog, public
