@@ -1,0 +1,116 @@
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
+
+export type UserRole = "admin" | "supervisor" | "sales";
+export type UserProfile = {
+  id: string;
+  full_name: string;
+  email: string | null;
+  role: UserRole;
+  is_active: boolean;
+};
+
+type AuthContextValue = {
+  session: Session | null;
+  profile: UserProfile | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+  reloadProfile: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+async function getProfile(userId: string): Promise<UserProfile> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, role, is_active")
+    .eq("id", userId)
+    .single();
+
+  if (error) throw error;
+  if (!data || !data.is_active) throw new Error("Akun belum aktif. Hubungi administrator.");
+  if (!["admin", "supervisor", "sales"].includes(data.role)) {
+    throw new Error("Role akun tidak dikenali. Hubungi administrator.");
+  }
+  return data as UserProfile;
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!mounted) return;
+      setSession(nextSession);
+      if (!nextSession) {
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+      // Defer the profile request so the auth callback can finish first.
+      setTimeout(() => {
+        getProfile(nextSession.user.id)
+          .then((nextProfile) => { if (mounted) setProfile(nextProfile); })
+          .catch(async () => {
+            if (mounted) setProfile(null);
+            await supabase.auth.signOut();
+          })
+          .finally(() => { if (mounted) setLoading(false); });
+      }, 0);
+    });
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!mounted) return;
+      if (error || !data.session) {
+        setSession(null);
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+      setSession(data.session);
+      getProfile(data.session.user.id)
+        .then((nextProfile) => { if (mounted) setProfile(nextProfile); })
+        .catch(async () => {
+          if (mounted) setProfile(null);
+          await supabase.auth.signOut();
+        })
+        .finally(() => { if (mounted) setLoading(false); });
+    });
+
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const value = useMemo<AuthContextValue>(() => ({
+    session,
+    profile,
+    loading,
+    async signIn(email, password) {
+      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      if (error) throw error;
+    },
+    async signOut() {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    },
+    async reloadProfile() {
+      if (!session?.user.id) return;
+      setProfile(await getProfile(session.user.id));
+    },
+  }), [session, profile, loading]);
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used inside AuthProvider");
+  return context;
+}
