@@ -34,7 +34,20 @@ function parseSource(value: unknown) {
 }
 function styleSheet(sheet: XLSX.WorkSheet, rows: Record<string, unknown>[]) {
   const keys = rows.length ? Object.keys(rows[0]) : [];
-  sheet["!cols"] = keys.map((key) => ({ wch: Math.min(34, Math.max(14, key.length + 4)) }));
+  const sampleRows = rows.slice(0, 200);
+  const compactColumns = new Set(["No", "Tanggal Prospek", "Tanggal SPK", "Sudah SPK", "Status", "Status Deal", "Status Prospek", "Status SPK", "Kategori Sumber"]);
+  const wideColumns = new Set(["Nama Konsumen", "Nama Sales", "Alamat", "Catatan", "Respon Konsumen", "Sumber Lengkap", "Jadwal Follow-up"]);
+  sheet["!cols"] = keys.map((key) => {
+    const headerWidth = key.length + 2;
+    const contentWidth = sampleRows.reduce((max, row) => {
+      const value = row[key];
+      const length = value == null ? 0 : String(value).length;
+      return Math.max(max, length);
+    }, 0);
+    const min = compactColumns.has(key) ? 10 : 12;
+    const max = wideColumns.has(key) ? 30 : compactColumns.has(key) ? 18 : 24;
+    return { wch: Math.min(max, Math.max(min, headerWidth, contentWidth + 2)) };
+  });
   if (sheet["!ref"]) sheet["!autofilter"] = { ref: sheet["!ref"] };
   sheet["!freeze"] = { xSplit: 0, ySplit: 1, topLeftCell: "A2", activePane: "bottomLeft", state: "frozen" };
 }
