@@ -122,6 +122,13 @@ tbody tr:hover{background:rgba(255,255,255,.72)}
  .login{margin:5vh auto;padding:27px 22px}
  table{min-width:720px}
 }
+
+.user-pill{display:inline-flex;align-items:center;gap:9px;max-width:260px;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.64);border:1px solid rgba(255,255,255,.92);box-shadow:var(--shadow-soft);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);font-size:12px;font-weight:700;color:#3c4658;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-dot{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#1b9b68;box-shadow:0 0 0 4px rgba(27,155,104,.12)}
+.user-role{padding:4px 8px;border-radius:999px;background:rgba(215,25,32,.09);color:#b71920;font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+@media(max-width:900px){.user-pill{margin-left:auto;max-width:100%}}
+@media(max-width:600px){.user-pill{font-size:11px;padding:7px 10px}.user-role{font-size:9px}}
+
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
  .topbar,.card,.nav a,.btn,.tablewrap{background:rgba(255,255,255,.97)}
