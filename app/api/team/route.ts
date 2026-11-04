@@ -62,10 +62,11 @@ export async function POST(request: NextRequest) {
     await ctx.admin.auth.admin.deleteUser(created.user.id);
     return NextResponse.json({ error: "Profil gagal disimpan. Pembuatan akun dibatalkan." }, { status: 500 });
   }
-  await ctx.admin.from("activity_logs").insert({
+  const { error: logError } = await ctx.admin.from("activity_logs").insert({
     table_name: "profiles", record_id: created.user.id, actor_id: ctx.user.id,
     action: "create_user", new_data: { full_name: fullName, email, role, supervisor_id: supervisorId }
   });
+  if (logError) console.error("Activity log create_user failed:", logError.message);
   return NextResponse.json({ ok: true, user: { id: created.user.id, full_name: fullName, email, role, is_active: true, supervisor_id: supervisorId } }, { status: 201 });
 }
 
@@ -130,9 +131,10 @@ export async function PATCH(request: NextRequest) {
   const { data: updated, error } = await ctx.admin.from("profiles").update(changes).eq("id", id)
     .select("id,full_name,email,role,is_active,supervisor_id").single();
   if (error) return NextResponse.json({ error: "Perubahan gagal disimpan." }, { status: 500 });
-  await ctx.admin.from("activity_logs").insert({
+  const { error: logError } = await ctx.admin.from("activity_logs").insert({
     table_name: "profiles", record_id: id, actor_id: ctx.user.id,
     action: "update_user", old_data: target, new_data: updated
   });
+  if (logError) console.error("Activity log update_user failed:", logError.message);
   return NextResponse.json({ ok: true, user: updated });
 }
