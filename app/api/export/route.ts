@@ -11,7 +11,7 @@ function dateParam(value: string | null) {
 }
 function safeCell(value: unknown) {
   if (typeof value !== "string") return value ?? "";
-  const normalized = value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, " ");
+  const normalized = value.replace(/[\\u0000-\\u001F\\u007F]/g, " ");
   return /^[\s]*[=+@-]/.test(normalized) ? "'" + normalized : normalized;
 }
 function parseSource(value: unknown) {
