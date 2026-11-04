@@ -9,6 +9,11 @@ function dateParam(value: string | null) {
   const parsed = new Date(value + "T00:00:00.000Z");
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value ? value : null;
 }
+function safeCell(value: unknown) {
+  if (typeof value !== "string") return value ?? "";
+  const normalized = value.replace(/[\\u0000-\\u0008\\u000B\\u000C\\u000E-\\u001F]/g, " ");
+  return /^[\\s]*[=+\\-@]/.test(normalized) ? "'" + normalized : normalized;
+}
 function styleSheet(sheet: XLSX.WorkSheet, rows: Record<string, unknown>[]) {
   const keys = rows.length ? Object.keys(rows[0]) : [];
   sheet["!cols"] = keys.map((key) => ({ wch: Math.min(34, Math.max(14, key.length + 4)) }));
@@ -50,7 +55,7 @@ export async function GET(request: NextRequest) {
   let totalSpk = 0;
 
   if (type === "prospects" || type === "all") {
-    let query = supabase.from("prospects").select("*").order("prospect_date", { ascending: true });
+    let query = supabase.from("prospects").select("id,user_id,prospect_date,customer_name,phone,source,unit_interest,status,deal_status,follow_up,lead_response,spk_created,notes").order("prospect_date", { ascending: true });
     if (from) query = query.gte("prospect_date", from);
     if (to) query = query.lte("prospect_date", to);
     if (elevated && salesId) query = query.eq("user_id", salesId);
@@ -65,8 +70,8 @@ export async function GET(request: NextRequest) {
       "Nomor HP": row.phone, "Sumber": row.source || "", "Motor Diminati": row.unit_interest || "",
       "Status": row.status, "Status Deal": row.deal_status, "Jadwal Follow-up": row.follow_up || "",
       "Respon Konsumen": row.lead_response || "", "Sudah SPK": row.spk_created ? "Ya" : "Belum",
-      "Catatan": row.notes || "", "Nama Sales": names.get(row.user_id) || profile.full_name || "-",
-    }));
+      "Catatan": row.notes || "", "Nama Sales": names.get(row.user_id) || "-",
+    })).map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, safeCell(value)])));
     totalProspects = rows.length;
     const sheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ "Informasi": "Tidak ada data pada periode yang dipilih." }]);
     styleSheet(sheet, rows);
@@ -74,19 +79,22 @@ export async function GET(request: NextRequest) {
   }
 
   if (type === "spk" || type === "all") {
-    let query = supabase.from("spk_records").select("*").order("spk_date", { ascending: true });
+    let query = supabase.from("spk_records").select("id,user_id,spk_date,customer_name,phone,address,source,unit_type,dp_cash,leasing,status,notes").order("spk_date", { ascending: true });
     if (from) query = query.gte("spk_date", from);
     if (to) query = query.lte("spk_date", to);
     if (elevated && salesId) query = query.eq("user_id", salesId);
     if (spkStatus) query = query.eq("status", spkStatus);
     const { data, error } = await query;
     if (error) return NextResponse.json({ error: "Data SPK gagal dibaca." }, { status: 500 });
+    const ids = Array.from(new Set((data || []).map((row) => row.user_id)));
+    const { data: people } = await supabase.from("profiles").select("id,full_name").in("id", ids.length ? ids : [user.id]);
+    const names = new Map((people || []).map((person) => [person.id, person.full_name]));
     const rows = (data || []).map((row, index) => ({
-      "No": index + 1, "Tanggal SPK": row.spk_date, "Nama Sales": row.sales_name || profile.full_name || "-",
+      "No": index + 1, "Tanggal SPK": row.spk_date, "Nama Sales": names.get(row.user_id) || "-",
       "Nama Konsumen": row.customer_name, "Nomor HP": row.phone, "Alamat": row.address || "",
       "Sumber": row.source || "", "Tipe Motor": row.unit_type, "DP / Harga Cash": row.dp_cash || "",
       "Leasing": row.leasing || "", "Status SPK": row.status, "Catatan": row.notes || "",
-    }));
+    })).map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, safeCell(value)])));
     totalSpk = rows.length;
     const sheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ "Informasi": "Tidak ada data pada periode yang dipilih." }]);
     styleSheet(sheet, rows);
