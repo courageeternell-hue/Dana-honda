@@ -29,7 +29,8 @@ export default function SpkScreen(){
   setSaving(false);if(result.error){Alert.alert("Gagal menyimpan",result.error.message);return;}setModal(false);await load();
  }
  function remove(item:Spk){Alert.alert("Hapus SPK?",`Data SPK ${item.customer_name} akan dihapus.`,[{text:"Batal",style:"cancel"},{text:"Hapus",style:"destructive",onPress:async()=>{const {error}=await supabase.from("spk_records").delete().eq("id",item.id);if(error)Alert.alert("Tidak bisa menghapus",error.message);else load();}}]);}
- const field=(key:keyof Draft,placeholder:string)=> <View style={s.field}><Text style={s.label}>{{customer_name:"Nama pelanggan",phone:"Nomor HP",unit_type:"Tipe motor",dp_cash:"DP / cash",leasing:"Leasing"}[key]??"Status"}</Text><TextInput value={draft[key]} onChangeText={v=>setDraft(p=>({...p,[key]:v}))} placeholder={placeholder} placeholderTextColor="#A1A1B0" style={s.input}/></View>;
+ const labels:Record<keyof Draft,string>={customer_name:"Nama pelanggan",phone:"Nomor HP",unit_type:"Tipe motor",dp_cash:"DP / cash",leasing:"Leasing",status:"Status"};
+ const field=(key:keyof Draft,placeholder:string)=> <View style={s.field}><Text style={s.label}>{labels[key]}</Text><TextInput value={draft[key]} onChangeText={v=>setDraft(p=>({...p,[key]:v}))} placeholder={placeholder} placeholderTextColor="#A1A1B0" style={s.input}/></View>;
  return <View style={s.page}>
   <View style={s.header}><View><Text style={s.title}>SPK</Text><Text style={s.subtitle}>{items.length} data SPK</Text></View><Pressable style={s.add} onPress={openNew}><Text style={s.addText}>+ Tambah</Text></Pressable></View>
   {loading?<View style={s.center}><ActivityIndicator color="#5B4BDB"/><Text style={s.muted}>Memuat SPK...</Text></View>:<ScrollView contentContainerStyle={{paddingBottom:30}}>
