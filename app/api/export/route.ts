@@ -12,7 +12,7 @@ function dateParam(value: string | null) {
 function safeCell(value: unknown) {
   if (typeof value !== "string") return value ?? "";
   const normalized = value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, " ");
-  return /^[\s]*[=+\\-@]/.test(normalized) ? "'" + normalized : normalized;
+  return /^[\s]*[=+@-]/.test(normalized) ? "'" + normalized : normalized;
 }
 function styleSheet(sheet: XLSX.WorkSheet, rows: Record<string, unknown>[]) {
   const keys = rows.length ? Object.keys(rows[0]) : [];
@@ -60,8 +60,16 @@ export async function GET(request: NextRequest) {
     if (to) query = query.lte("prospect_date", to);
     if (elevated && salesId) query = query.eq("user_id", salesId);
     if (prospectStatus) query = query.eq("status", prospectStatus);
-    const { data, error } = await query;
-    if (error) return NextResponse.json({ error: "Data prospek gagal dibaca." }, { status: 500 });
+    const allRows: any[] = [];
+    let offset = 0;
+    while (true) {
+      const { data: batch, error } = await query.range(offset, offset + 999);
+      if (error) return NextResponse.json({ error: "Data prospek gagal dibaca." }, { status: 500 });
+      allRows.push(...(batch || []));
+      if (!batch || batch.length < 1000) break;
+      offset += 1000;
+    }
+    const data = allRows;
     const ids = Array.from(new Set((data || []).map((row) => row.user_id)));
     const { data: people } = await supabase.from("profiles").select("id,full_name").in("id", ids.length ? ids : [user.id]);
     const names = new Map((people || []).map((person) => [person.id, person.full_name]));
@@ -84,8 +92,16 @@ export async function GET(request: NextRequest) {
     if (to) query = query.lte("spk_date", to);
     if (elevated && salesId) query = query.eq("user_id", salesId);
     if (spkStatus) query = query.eq("status", spkStatus);
-    const { data, error } = await query;
-    if (error) return NextResponse.json({ error: "Data SPK gagal dibaca." }, { status: 500 });
+    const allRows: any[] = [];
+    let offset = 0;
+    while (true) {
+      const { data: batch, error } = await query.range(offset, offset + 999);
+      if (error) return NextResponse.json({ error: "Data SPK gagal dibaca." }, { status: 500 });
+      allRows.push(...(batch || []));
+      if (!batch || batch.length < 1000) break;
+      offset += 1000;
+    }
+    const data = allRows;
     const ids = Array.from(new Set((data || []).map((row) => row.user_id)));
     const { data: people } = await supabase.from("profiles").select("id,full_name").in("id", ids.length ? ids : [user.id]);
     const names = new Map((people || []).map((person) => [person.id, person.full_name]));
