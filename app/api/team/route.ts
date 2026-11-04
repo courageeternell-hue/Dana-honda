@@ -38,7 +38,10 @@ export async function POST(request: NextRequest) {
   let supervisorId: string | null = null;
   if (role === "sales") {
     if (ctx.actor.role === "supervisor") supervisorId = ctx.user.id;
-    else if (body.supervisor_id) {
+    else if (ctx.actor.role === "super_admin" && !body.supervisor_id) {
+      return NextResponse.json({ error: "Pilih Supervisor untuk Sales baru agar masuk ke tim yang benar." }, { status: 400 });
+    } else if (body.supervisor_id) {
+      if (!/^[0-9a-f-]{36}$/i.test(body.supervisor_id)) return NextResponse.json({ error: "ID Supervisor tidak valid." }, { status: 400 });
       const { data: supervisor } = await ctx.admin.from("profiles").select("id,role,is_active").eq("id", body.supervisor_id).maybeSingle();
       if (!supervisor || supervisor.role !== "supervisor" || supervisor.is_active === false) {
         return NextResponse.json({ error: "Supervisor tujuan tidak valid atau tidak aktif." }, { status: 400 });
@@ -117,8 +120,10 @@ export async function PATCH(request: NextRequest) {
     if (ctx.actor.role !== "super_admin" || resultingRole !== "sales" || target.role !== "sales") {
       return NextResponse.json({ error: "Hanya Super Admin yang dapat memindahkan Sales antar tim." }, { status: 403 });
     }
-    if (body.supervisor_id === null || body.supervisor_id === "") changes.supervisor_id = null;
-    else {
+    if (body.supervisor_id === null || body.supervisor_id === "") {
+      return NextResponse.json({ error: "Sales harus tetap memiliki Supervisor aktif. Pilih tim tujuan terlebih dahulu." }, { status: 400 });
+    } else {
+      if (!/^[0-9a-f-]{36}$/i.test(body.supervisor_id)) return NextResponse.json({ error: "ID Supervisor tidak valid." }, { status: 400 });
       const { data: supervisor } = await ctx.admin.from("profiles").select("id,role,is_active").eq("id", body.supervisor_id).maybeSingle();
       if (!supervisor || supervisor.role !== "supervisor" || supervisor.is_active === false) {
         return NextResponse.json({ error: "Supervisor tujuan tidak valid atau tidak aktif." }, { status: 400 });
