@@ -5,49 +5,70 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+type Profile = { full_name?: string | null; role?: string | null; is_active?: boolean | null };
+
 export default function Header() {
   const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const pathname = usePathname();
 
   useEffect(() => {
     const supabase = createClient();
     let mounted = true;
-    async function loadUser() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!mounted) return;
-      setUser(user);
-      if (user) {
-        const { data } = await supabase.from("profiles")
-          .select("full_name,role,is_active").eq("id", user.id).maybeSingle();
-        if (mounted) setProfile(data);
-      }
+    let profileRequest = 0;
+
+    async function loadProfile(userId: string) {
+      const request = ++profileRequest;
+      const { data } = await supabase.from("profiles")
+        .select("full_name,role,is_active").eq("id", userId).maybeSingle();
+      if (mounted && request === profileRequest) setProfile(data);
     }
-    loadUser();
-    const { data: listener } = supabase.auth.onAuthStateChange(() => { loadUser(); });
-    return () => { mounted = false; listener.subscription.unsubscribe(); };
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      setUser(session?.user ?? null);
+      if (session?.user) void loadProfile(session.user.id);
+      else setProfile(null);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      setUser(session?.user ?? null);
+      if (session?.user) void loadProfile(session.user.id);
+      else { profileRequest++; setProfile(null); }
+    });
+
+    return () => {
+      mounted = false;
+      profileRequest++;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   const elevated = profile?.role === "supervisor" || profile?.role === "super_admin";
   const navItems = [
-    { href: "/", label: "Dashboard" },
     { href: "/prospects", label: "Prospek" },
     { href: "/spk", label: "SPK" },
-    ...(elevated ? [{ href: "/reports", label: "Laporan" }, { href: "/team", label: "Kelola Pengguna" }] : []),
-    { href: "/account", label: "Profil" },
+    ...(elevated ? [{ href: "/team", label: "Pengguna" }] : []),
   ];
 
   return <header className="topbar">
     <div className="topinner">
-      <Link href="/" className="brand" aria-label="Dana Honda - Dashboard">
+      <Link href="/" className="brand" aria-label="Dana Honda">
         <div className="logo">H</div>
         <div>DANA HONDA<div className="muted">Sales Team Management</div></div>
       </Link>
       {user && <nav className="nav" aria-label="Navigasi utama">
         {navItems.map(item => <Link key={item.href} href={item.href}
-          className={pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/")) ? "active" : ""}>{item.label}</Link>)}
+          prefetch={true}
+          className={pathname === item.href || pathname.startsWith(item.href + "/") ? "active" : ""}>{item.label}</Link>)}
       </nav>}
-      {user && <div className="user-pill"><span className="user-dot" />{profile?.full_name || user.email}<span className="user-role">{profile?.role || "sales"}</span></div>}
+      {user && <Link href="/account" prefetch={true}
+        className={"profile-nav" + (pathname === "/account" ? " active" : "")}
+        aria-label="Buka profil dan menu">
+        <span className="profile-avatar">{(profile?.full_name || user.email || "U").trim().charAt(0).toUpperCase()}</span>
+        <span className="profile-copy"><strong>{profile?.full_name || user.email}</strong><small>{profile?.role === "super_admin" ? "Super Admin" : profile?.role === "supervisor" ? "Supervisor" : "Sales"} · Profil</small></span>
+      </Link>}
     </div>
   </header>;
 }
