@@ -6,7 +6,14 @@ import { supabase } from "@/lib/supabase";
 type Metrics = { prospects: number; spk: number; closing: number; prospectTarget: number; spkTarget: number };
 const empty: Metrics = { prospects: 0, spk: 0, closing: 0, prospectTarget: 0, spkTarget: 0 };
 
-function dateKey(date: Date) {\n  const y = date.getFullYear();\n  const m = String(date.getMonth() + 1).padStart(2, "0");\n  const d = String(date.getDate()).padStart(2, "0");\n  return `${y}-${m}-${d}`;\n}\n\nfunction Stat({ label, value, note }: { label: string; value: string; note: string }) {
+function dateKey(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function Stat({ label, value, note }: { label: string; value: string; note: string }) {
   return <View style={s.stat}><Text style={s.statLabel}>{label}</Text><Text style={s.statValue}>{value}</Text><Text style={s.statNote}>{note}</Text></View>;
 }
 
