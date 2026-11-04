@@ -11,27 +11,49 @@ export default async function Account() {
     .select("full_name,email,role,is_active,created_at").eq("id", user.id).single();
   if (!profile || profile.is_active === false) redirect("/login");
 
-  const roleLabel = profile.role === "super_admin" ? "Super Admin" : profile.role === "supervisor" ? "Supervisor" : "Sales";
+  const isAdmin = profile.role === "super_admin";
+  const isSupervisor = profile.role === "supervisor";
+  const roleLabel = isAdmin ? "Super Admin" : isSupervisor ? "Supervisor" : "Sales";
+  const menu = [
+    { title: "Dashboard", description: "Ringkasan aktivitas dan performa sesuai hak akses akun.", href: "/", action: "Buka Dashboard", group: "Umum" },
+    { title: "Laporan & Export Excel", description: "Filter data dan unduh laporan Prospek maupun SPK.", href: "/reports", action: "Buka Laporan", group: "Sales" },
+    { title: "Input Prospek", description: "Catat calon konsumen dan aktivitas follow-up.", href: "/prospects/new", action: "Tambah Prospek", group: "Sales" },
+    { title: "Input SPK", description: "Catat transaksi SPK baru.", href: "/spk/new", action: "Tambah SPK", group: "Sales" },
+    ...(isSupervisor || isAdmin ? [
+      { title: "Dashboard Supervisor", description: "Pantau aktivitas dan performa anggota tim.", href: "/", action: "Buka Dashboard Tim", group: "Manajemen" },
+      { title: "Kelola Pengguna", description: "Kelola akun Sales dan pembagian tim sesuai kewenangan.", href: "/team", action: "Kelola Pengguna", group: "Manajemen" },
+    ] : []),
+    ...(isAdmin ? [
+      { title: "Kontrol Super Admin", description: "Kelola struktur role dan akses pengguna seluruh tim.", href: "/team", action: "Buka Kontrol Admin", group: "Manajemen" },
+    ] : []),
+  ];
+
   return <>
     <Header />
     <main className="shell">
-      <div className="toolbar"><div><div className="muted">PENGATURAN AKUN</div><h1>Profil Saya</h1>
-        <p className="muted">Informasi akun dan pintasan dashboard sesuai hak akses.</p></div><span className="badge red">{roleLabel}</span></div>
-      <section className="card">
-        <h2>Informasi Pengguna</h2>
-        <p><b>Nama:</b> {profile.full_name || "-"}</p>
-        <p><b>Email:</b> {profile.email || user.email || "-"}</p>
-        <p><b>Role:</b> {roleLabel}</p>
-        <p><b>Status:</b> {profile.is_active ? "Aktif" : "Nonaktif"}</p>
+      <div className="toolbar">
+        <div><div className="muted">PENGATURAN AKUN</div><h1>Profil Saya</h1>
+          <p className="muted">Semua dashboard dan fitur akun tersedia di sini.</p></div>
+        <span className="badge red">{roleLabel}</span>
+      </div>
+      <section className="card profile-details">
+        <div className="profile-avatar large">{(profile.full_name || user.email || "U").trim().charAt(0).toUpperCase()}</div>
+        <div><h2>{profile.full_name || "Pengguna"}</h2><p className="muted">{profile.email || user.email || "-"}</p>
+          <span className="badge green">Akun aktif · {roleLabel}</span></div>
       </section>
-      <section style={{marginTop:22}}>
-        <h2>Dashboard dan Menu</h2>
-        <div className="grid">
-          <article className="card"><h3>Dashboard Saya</h3><p className="muted">Ringkasan pekerjaan sesuai akun.</p><Link className="btn primary" href="/">Buka Dashboard</Link></article>
-          {profile.role !== "sales" && <article className="card"><h3>Dashboard Supervisor</h3><p className="muted">Pantau tim, prospek, SPK, dan laporan.</p><Link className="btn" href="/team">Kelola Pengguna</Link></article>}
-          {profile.role === "super_admin" && <article className="card"><h3>Kontrol Super Admin</h3><p className="muted">Kelola role dan akses seluruh pengguna.</p><Link className="btn" href="/team">Buka Manajemen Pengguna</Link></article>}
-        </div>
-      </section>
+      {["Umum", "Sales", "Manajemen"].map(group => {
+        const items = menu.filter(item => item.group === group);
+        if (!items.length) return null;
+        return <section className="profile-menu-section" key={group}>
+          <h2>{group}</h2>
+          <div className="profile-menu-grid">
+            {items.map((item, index) => <article className="card profile-menu-card" key={item.title + index}>
+              <div><h3>{item.title}</h3><p className="muted">{item.description}</p></div>
+              <Link className="btn" href={item.href}>{item.action}<span aria-hidden="true"> →</span></Link>
+            </article>)}
+          </div>
+        </section>;
+      })}
       <form action="/auth/signout" method="post" className="actions"><button className="btn danger" type="submit">Keluar</button></form>
     </main>
   </>;
