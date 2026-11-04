@@ -27,7 +27,7 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 async function getProfile(userId: string): Promise<UserProfile> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, email, avatar_url, role, is_active")
+    .select("id, full_name, email, role, is_active")
     .eq("id", userId)
     .single();
 
@@ -36,7 +36,12 @@ async function getProfile(userId: string): Promise<UserProfile> {
   if (!["admin", "supervisor", "sales"].includes(data.role)) {
     throw new Error("Role akun tidak dikenali. Hubungi administrator.");
   }
-  return data as UserProfile;
+  const { data: avatar } = await supabase
+    .from("profile_avatars")
+    .select("avatar_url")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return { ...data, avatar_url: avatar?.avatar_url ?? null } as UserProfile;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
