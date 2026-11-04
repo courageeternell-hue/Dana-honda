@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
   if (profile?.role !== "super_admin" || profile.is_active === false) {
     await supabase.auth.signOut();
-    return NextResponse.redirect(new URL("/login?error=not-allowed", url.origin));
+    response.headers.set("location", new URL("/login?error=not-allowed", url.origin).toString());\n    return response;
   }
 
   return response;
