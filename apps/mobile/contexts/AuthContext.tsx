@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { AppState, type AppStateStatus } from "react-native";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 
@@ -44,27 +45,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
+    let profileRequest = 0;
+
+    const loadProfile = async (userId: string) => {
+      const requestId = ++profileRequest;
+      try {
+        const nextProfile = await getProfile(userId);
+        if (mounted && requestId === profileRequest) setProfile(nextProfile);
+      } catch {
+        if (mounted && requestId === profileRequest) {
+          setProfile(null);
+          await supabase.auth.signOut();
+        }
+      } finally {
+        if (mounted && requestId === profileRequest) setLoading(false);
+      }
+    };
+
+    const handleAppState = (state: AppStateStatus) => {
+      if (state === "active") supabase.auth.startAutoRefresh();
+      else supabase.auth.stopAutoRefresh();
+    };
+
+    handleAppState(AppState.currentState);
+    const appStateSubscription = AppState.addEventListener("change", handleAppState);
+
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (!mounted) return;
       setSession(nextSession);
       if (!nextSession) {
+        profileRequest += 1;
         setProfile(null);
         setLoading(false);
         return;
       }
-      // Defer the profile request so the auth callback can finish first.
-      setTimeout(() => {
-        getProfile(nextSession.user.id)
-          .then((nextProfile) => { if (mounted) setProfile(nextProfile); })
-          .catch(async () => {
-            if (mounted) setProfile(null);
-            await supabase.auth.signOut();
-          })
-          .finally(() => { if (mounted) setLoading(false); });
-      }, 0);
+      setLoading(true);
+      // Defer profile access until the auth event callback has completed.
+      Promise.resolve().then(() => {
+        if (mounted) void loadProfile(nextSession.user.id);
+      });
     });
 
-    supabase.auth.getSession().then(({ data, error }) => {
+    void supabase.auth.getSession().then(({ data, error }) => {
       if (!mounted) return;
       if (error || !data.session) {
         setSession(null);
@@ -73,18 +95,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       setSession(data.session);
-      getProfile(data.session.user.id)
-        .then((nextProfile) => { if (mounted) setProfile(nextProfile); })
-        .catch(async () => {
-          if (mounted) setProfile(null);
-          await supabase.auth.signOut();
-        })
-        .finally(() => { if (mounted) setLoading(false); });
+      setLoading(true);
+      awaitProfile(data.session.user.id);
     });
+
+    const awaitProfile = (userId: string) => {
+      void loadProfile(userId);
+    };
 
     return () => {
       mounted = false;
+      profileRequest += 1;
       listener.subscription.unsubscribe();
+      appStateSubscription.remove();
+      supabase.auth.stopAutoRefresh();
     };
   }, []);
 
@@ -93,7 +117,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     loading,
     async signIn(email, password) {
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
       if (error) throw error;
     },
     async signOut() {
