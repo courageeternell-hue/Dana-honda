@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Honda Sales",
+    "name": "Asisten Sales",
     "slug": "dana-honda-acsjjx4z-wfgh5e4l85n",
     "scheme": "hondasales",
     "version": "1.0.0",
@@ -10,11 +10,18 @@
       "package": "com.danz.hondasales",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#5B4BDB"
+        "backgroundColor": "#D71920"
       }
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Izinkan Asisten Sales mengakses galeri untuk mengganti foto profil.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
