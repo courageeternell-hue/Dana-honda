@@ -44,9 +44,8 @@ export async function GET(request: NextRequest) {
 
   if (profile?.role !== "super_admin" || profile.is_active === false) {
     await supabase.auth.signOut();
-    const redirect = NextResponse.redirect(new URL("/login?error=not-allowed", url.origin));
-    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
-    return redirect;
+    response.headers.set("location", new URL("/login?error=not-allowed", url.origin).toString());
+    return response;
   }
 
   return response;
