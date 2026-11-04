@@ -133,3 +133,68 @@ tbody tr:hover{background:rgba(255,255,255,.72)}
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
  .topbar,.card,.nav a,.btn,.tablewrap{background:rgba(255,255,255,.97)}
 }
+
+
+/* Android-first touch and mobile layout */
+html,body{max-width:100%;overflow-x:clip}
+body{-webkit-text-size-adjust:100%;text-size-adjust:100%;overscroll-behavior-y:contain}
+button,a,select{touch-action:manipulation}
+button,.btn,.nav a{min-height:44px}
+input,select,textarea{font-size:16px;scroll-margin-top:90px}
+.tablewrap{max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain;scrollbar-width:thin;scrollbar-color:rgba(104,115,134,.35) transparent}
+.tablewrap::-webkit-scrollbar{height:5px}
+.tablewrap::-webkit-scrollbar-thumb{background:rgba(104,115,134,.32);border-radius:99px}
+.mobile-records{display:none}
+.record-card{margin-bottom:12px}
+.record-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.record-card h3{font-size:16px;margin:0 0 4px}
+.record-phone{display:inline-flex;color:#b71920;font-weight:750;margin-bottom:12px}
+.record-meta{display:flex;justify-content:space-between;gap:14px;padding:8px 0;border-top:1px solid rgba(221,227,236,.7);font-size:12px}
+.record-meta span{color:var(--muted)}
+.record-meta strong{text-align:right;overflow-wrap:anywhere}
+.record-action{width:100%;margin-top:13px}
+@media(max-width:600px){
+ .shell{width:100%;padding:17px 13px calc(30px + env(safe-area-inset-bottom))}
+ .topbar{padding-top:env(safe-area-inset-top)}
+ .topinner{width:100%;padding:9px 13px;gap:9px}
+ .brand{gap:9px;white-space:normal;min-width:0}
+ .brand .muted{font-size:10px}
+ .logo{width:38px;height:38px;flex:0 0 38px;font-size:19px}
+ .nav{order:4;width:calc(100% + 26px);margin:0 -13px -9px;padding:7px 13px 10px;gap:7px;overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-inline:contain}
+ .nav::-webkit-scrollbar{display:none}
+ .nav a{flex:0 0 auto;min-height:42px;padding:9px 13px;font-size:12px;white-space:nowrap}
+ .user-pill{order:3;margin-left:auto;max-width:calc(100% - 55px);font-size:10px;gap:6px;padding:6px 9px}
+ .user-role{font-size:9px}
+ .toolbar{gap:12px;margin:15px 0 18px}
+ .toolbar>div{min-width:0;flex:1 1 100%}
+ .toolbar>.btn,.toolbar>a.btn{width:100%}
+ .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .card{min-width:0;padding:15px;border-radius:17px}
+ .metric{font-size:26px;overflow-wrap:anywhere}
+ .formgrid{grid-template-columns:minmax(0,1fr);gap:13px}
+ label{min-width:0}
+ input,select,textarea{width:100%;min-height:48px;border-radius:13px;padding:12px 13px}
+ textarea{min-height:105px}
+ .actions{gap:8px}
+ .actions .btn{flex:1 1 100%;width:100%;min-height:47px}
+ .tablewrap table{min-width:700px}
+ .tablewrap th,.tablewrap td{padding:12px 11px}
+ .tablewrap th:first-child,.tablewrap td:first-child{position:sticky;left:0;z-index:2;background:rgba(250,251,253,.97);box-shadow:5px 0 9px rgba(25,36,58,.045)}
+ .tablewrap th:first-child{z-index:3;background:rgba(244,247,251,.98)}
+ .desktop-records{display:none}
+ .mobile-records{display:block}
+ .login{width:calc(100% - 26px);margin:4vh auto;padding:25px 19px}
+ .login .actions .btn{width:100%}
+ [role="dialog"]{padding:10px!important}
+ [role="dialog"]>.card{max-height:calc(100dvh - 20px)!important;padding:19px!important;border-radius:20px}
+}
+@media(max-width:380px){
+ .shell{padding-left:10px;padding-right:10px}
+ .topinner{padding-left:10px;padding-right:10px}
+ .grid{gap:8px}
+ .card{padding:13px}
+ .metric{font-size:23px}
+ .nav{width:calc(100% + 20px);margin-left:-10px;margin-right:-10px;padding-left:10px;padding-right:10px}
+}
+@supports(height:100dvh){[role="dialog"]{max-height:100dvh}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
