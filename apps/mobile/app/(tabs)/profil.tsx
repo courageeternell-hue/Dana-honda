@@ -22,7 +22,7 @@ export default function ProfileScreen() {
     <Text style={s.section}>Menu akun</Text>
     <View style={s.menu}>
       {canManage && <Pressable style={s.menuItem} onPress={() => router.push("/admin")}><Text style={s.menuText}>Dasbor Admin / Supervisor</Text><Text style={s.chevron}>›</Text></Pressable>}
-      <View style={s.menuItem}><Text style={s.menuText}>Informasi akun</Text><Text style={s.chevron}>›</Text></View>
+      <Pressable style={s.menuItem} onPress={() => Alert.alert("Informasi akun", `Nama: ${profile?.full_name || "-"}\nEmail: ${profile?.email || "-"}\nRole: ${roleLabel[profile?.role ?? "sales"]}`, [{ text: "Tutup" }])}><Text style={s.menuText}>Informasi akun</Text><Text style={s.chevron}>›</Text></Pressable>
     </View>
     <Pressable onPress={confirmSignOut} style={s.logout}><Text style={s.logoutText}>Keluar akun</Text></Pressable>
     <Text style={s.note}>Hak akses mengikuti role yang ditetapkan administrator.</Text>
