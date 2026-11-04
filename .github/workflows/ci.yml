@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [main, hardening/final-security-operations]
+    branches: [main, hardening/final-security-operations, ui/navigation-performance]
 
 permissions:
   contents: read
