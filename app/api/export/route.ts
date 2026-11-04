@@ -9,9 +9,45 @@ function dateParam(value: string | null) {
   const parsed = new Date(value + "T00:00:00.000Z");
   return !Number.isNaN(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value ? value : null;
 }
+function safeCell(value: unknown) {
+  if (typeof value !== "string") return value ?? "";
+  const normalized = value.replace(/[\u0000-\u001F\u007F]/g, " ");
+  return /^[\s]*[=+@-]/.test(normalized) ? "'" + normalized : normalized;
+}
+function parseSource(value: unknown) {
+  const raw = typeof value === "string" ? value.trim() : "";
+  if (!raw) return { category: "", detail: "", channel: "", full: "" };
+  const parts = raw.split(" - ").map((part) => part.trim());
+  if (parts[0] === "POS") {
+    return { category: "POS", detail: parts[1] || "", channel: "", full: raw };
+  }
+  if (parts[0] === "Medsos") {
+    return {
+      category: "Medsos",
+      detail: parts[1] || "",
+      channel: parts[1] === "TikTok" ? parts[2] || "" : "",
+      full: raw,
+    };
+  }
+  // Keep historical/custom source labels visible instead of dropping them.
+  return { category: "Lainnya / Data Lama", detail: raw, channel: "", full: raw };
+}
 function styleSheet(sheet: XLSX.WorkSheet, rows: Record<string, unknown>[]) {
   const keys = rows.length ? Object.keys(rows[0]) : [];
-  sheet["!cols"] = keys.map((key) => ({ wch: Math.min(34, Math.max(14, key.length + 4)) }));
+  const sampleRows = rows.slice(0, 200);
+  const compactColumns = new Set(["No", "Tanggal Prospek", "Tanggal SPK", "Sudah SPK", "Status", "Status Deal", "Status Prospek", "Status SPK", "Kategori Sumber"]);
+  const wideColumns = new Set(["Nama Konsumen", "Nama Sales", "Alamat", "Catatan", "Respon Konsumen", "Sumber Lengkap", "Jadwal Follow-up"]);
+  sheet["!cols"] = keys.map((key) => {
+    const headerWidth = key.length + 2;
+    const contentWidth = sampleRows.reduce((max, row) => {
+      const value = row[key];
+      const length = value == null ? 0 : String(value).length;
+      return Math.max(max, length);
+    }, 0);
+    const min = compactColumns.has(key) ? 10 : 12;
+    const max = wideColumns.has(key) ? 30 : compactColumns.has(key) ? 18 : 24;
+    return { wch: Math.min(max, Math.max(min, headerWidth, contentWidth + 2)) };
+  });
   if (sheet["!ref"]) sheet["!autofilter"] = { ref: sheet["!ref"] };
   sheet["!freeze"] = { xSplit: 0, ySplit: 1, topLeftCell: "A2", activePane: "bottomLeft", state: "frozen" };
 }
@@ -50,23 +86,39 @@ export async function GET(request: NextRequest) {
   let totalSpk = 0;
 
   if (type === "prospects" || type === "all") {
-    let query = supabase.from("prospects").select("*").order("prospect_date", { ascending: true });
+    let query = supabase.from("prospects").select("id,user_id,prospect_date,customer_name,phone,source,unit_interest,status,deal_status,follow_up,lead_response,spk_created,notes").order("prospect_date", { ascending: true }).order("id", { ascending: true });
     if (from) query = query.gte("prospect_date", from);
     if (to) query = query.lte("prospect_date", to);
     if (elevated && salesId) query = query.eq("user_id", salesId);
+    if (!elevated) query = query.eq("user_id", user.id);
     if (prospectStatus) query = query.eq("status", prospectStatus);
-    const { data, error } = await query;
-    if (error) return NextResponse.json({ error: "Data prospek gagal dibaca." }, { status: 500 });
+    const allRows: any[] = [];
+    let offset = 0;
+    while (true) {
+      const { data: batch, error } = await query.range(offset, offset + 999);
+      if (error) return NextResponse.json({ error: "Data prospek gagal dibaca." }, { status: 500 });
+      allRows.push(...(batch || []));
+      if (allRows.length > 25000) return NextResponse.json({ error: "Laporan melebihi batas 25.000 baris. Persempit periode atau filter terlebih dahulu." }, { status: 413 });
+      if (!batch || batch.length < 1000) break;
+      offset += 1000;
+    }
+    const data = allRows;
     const ids = Array.from(new Set((data || []).map((row) => row.user_id)));
     const { data: people } = await supabase.from("profiles").select("id,full_name").in("id", ids.length ? ids : [user.id]);
     const names = new Map((people || []).map((person) => [person.id, person.full_name]));
-    const rows = (data || []).map((row, index) => ({
-      "No": index + 1, "Tanggal Prospek": row.prospect_date, "Nama Konsumen": row.customer_name,
-      "Nomor HP": row.phone, "Sumber": row.source || "", "Motor Diminati": row.unit_interest || "",
-      "Status": row.status, "Status Deal": row.deal_status, "Jadwal Follow-up": row.follow_up || "",
-      "Respon Konsumen": row.lead_response || "", "Sudah SPK": row.spk_created ? "Ya" : "Belum",
-      "Catatan": row.notes || "", "Nama Sales": names.get(row.user_id) || profile.full_name || "-",
-    }));
+    const rows = (data || []).map((row, index) => {
+      const source = parseSource(row.source);
+      return {
+        "No": index + 1, "Tanggal Prospek": row.prospect_date, "Nama Sales": names.get(row.user_id) || "-",
+        "Nama Konsumen": row.customer_name, "Nomor HP": row.phone,
+        "Kategori Sumber": source.category, "Detail Sumber": source.detail,
+        "Jenis TikTok": source.channel, "Sumber Lengkap": source.full,
+        "Motor Diminati": row.unit_interest || "", "Status Prospek": row.status,
+        "Status Deal": row.deal_status, "Jadwal Follow-up": row.follow_up || "",
+        "Respon Konsumen": row.lead_response || "", "Sudah SPK": row.spk_created ? "Ya" : "Belum",
+        "Catatan": row.notes || "",
+      };
+    }).map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, safeCell(value)])));
     totalProspects = rows.length;
     const sheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ "Informasi": "Tidak ada data pada periode yang dipilih." }]);
     styleSheet(sheet, rows);
@@ -74,19 +126,37 @@ export async function GET(request: NextRequest) {
   }
 
   if (type === "spk" || type === "all") {
-    let query = supabase.from("spk_records").select("*").order("spk_date", { ascending: true });
+    let query = supabase.from("spk_records").select("id,user_id,spk_date,customer_name,phone,address,source,unit_type,dp_cash,leasing,status,notes").order("spk_date", { ascending: true }).order("id", { ascending: true });
     if (from) query = query.gte("spk_date", from);
     if (to) query = query.lte("spk_date", to);
     if (elevated && salesId) query = query.eq("user_id", salesId);
+    if (!elevated) query = query.eq("user_id", user.id);
     if (spkStatus) query = query.eq("status", spkStatus);
-    const { data, error } = await query;
-    if (error) return NextResponse.json({ error: "Data SPK gagal dibaca." }, { status: 500 });
-    const rows = (data || []).map((row, index) => ({
-      "No": index + 1, "Tanggal SPK": row.spk_date, "Nama Sales": row.sales_name || profile.full_name || "-",
-      "Nama Konsumen": row.customer_name, "Nomor HP": row.phone, "Alamat": row.address || "",
-      "Sumber": row.source || "", "Tipe Motor": row.unit_type, "DP / Harga Cash": row.dp_cash || "",
-      "Leasing": row.leasing || "", "Status SPK": row.status, "Catatan": row.notes || "",
-    }));
+    const allRows: any[] = [];
+    let offset = 0;
+    while (true) {
+      const { data: batch, error } = await query.range(offset, offset + 999);
+      if (error) return NextResponse.json({ error: "Data SPK gagal dibaca." }, { status: 500 });
+      allRows.push(...(batch || []));
+      if (allRows.length > 25000) return NextResponse.json({ error: "Laporan melebihi batas 25.000 baris. Persempit periode atau filter terlebih dahulu." }, { status: 413 });
+      if (!batch || batch.length < 1000) break;
+      offset += 1000;
+    }
+    const data = allRows;
+    const ids = Array.from(new Set((data || []).map((row) => row.user_id)));
+    const { data: people } = await supabase.from("profiles").select("id,full_name").in("id", ids.length ? ids : [user.id]);
+    const names = new Map((people || []).map((person) => [person.id, person.full_name]));
+    const rows = (data || []).map((row, index) => {
+      const source = parseSource(row.source);
+      return {
+        "No": index + 1, "Tanggal SPK": row.spk_date, "Nama Sales": names.get(row.user_id) || "-",
+        "Nama Konsumen": row.customer_name, "Nomor HP": row.phone, "Alamat": row.address || "",
+        "Kategori Sumber": source.category, "Detail Sumber": source.detail,
+        "Jenis TikTok": source.channel, "Sumber Lengkap": source.full,
+        "Tipe Motor": row.unit_type, "DP / Harga Cash": row.dp_cash || "",
+        "Leasing": row.leasing || "", "Status SPK": row.status, "Catatan": row.notes || "",
+      };
+    }).map((row) => Object.fromEntries(Object.entries(row).map(([key, value]) => [key, safeCell(value)])));
     totalSpk = rows.length;
     const sheet = XLSX.utils.json_to_sheet(rows.length ? rows : [{ "Informasi": "Tidak ada data pada periode yang dipilih." }]);
     styleSheet(sheet, rows);
@@ -98,7 +168,7 @@ export async function GET(request: NextRequest) {
     { "Jenis Laporan": "SPK", "Jumlah Data": totalSpk },
     { "Jenis Laporan": "Periode Mulai", "Jumlah Data": from || "Semua tanggal" },
     { "Jenis Laporan": "Periode Akhir", "Jumlah Data": to || "Semua tanggal" },
-    { "Jenis Laporan": "Dibuat Oleh", "Jumlah Data": profile.full_name || user.email || "-" },
+    { "Jenis Laporan": "Dibuat Oleh", "Jumlah Data": safeCell(profile.full_name || user.email || "-") },
   ];
   const summarySheet = XLSX.utils.json_to_sheet(summary);
   styleSheet(summarySheet, summary);

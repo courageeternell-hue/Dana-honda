@@ -21,6 +21,7 @@ export default function UsersManager({ users, canChangeRole, supervisors = [] }:
   const router = useRouter();
   const [busyId, setBusyId] = useState("");
   const [message, setMessage] = useState("");
+  const [assignmentTargets, setAssignmentTargets] = useState<Record<string, string>>({});
 
   async function update(id: string, patch: { role?: string; is_active?: boolean; supervisor_id?: string | null }) {
     if (busyId) return;
@@ -53,7 +54,13 @@ export default function UsersManager({ users, canChangeRole, supervisors = [] }:
                 {canChangeRole && person.role !== "super_admin" ? (
                   <select aria-label={"Role " + person.full_name} value={person.role}
                     disabled={busyId === person.id}
-                    onChange={event => update(person.id, { role: event.target.value })}>
+                    onChange={event => {
+                      if (event.target.value === "sales" && person.role === "supervisor") {
+                        setMessage("Pilih Supervisor tujuan di kolom Tim Supervisor sebelum mengubah akun menjadi Sales.");
+                        return;
+                      }
+                      update(person.id, { role: event.target.value });
+                    }}>
                     <option value="sales">Sales</option><option value="supervisor">Supervisor</option>
                   </select>
                 ) : <span className="badge">{person.role === "super_admin" ? "SUPER ADMIN" : person.role.toUpperCase()}</span>}
@@ -66,7 +73,24 @@ export default function UsersManager({ users, canChangeRole, supervisors = [] }:
                     <option value="">Belum ditentukan</option>
                     {supervisors.map(item => <option key={item.id} value={item.id}>{item.full_name}</option>)}
                   </select>
-                ) : person.role === "sales" ? "Tim sendiri" : "-"}
+                ) : person.role === "sales" ? "Tim sendiri" : canChangeRole && person.role === "supervisor" ? (
+                  <div className="actions" style={{ marginTop: 0, flexWrap: "wrap" }}>
+                    <select aria-label={"Supervisor tujuan " + person.full_name}
+                      value={assignmentTargets[person.id] || ""}
+                      disabled={busyId === person.id}
+                      onChange={event => setAssignmentTargets(current => ({ ...current, [person.id]: event.target.value }))}>
+                      <option value="">Pilih Supervisor tujuan</option>
+                      {supervisors.filter(item => item.id !== person.id).map(item =>
+                        <option key={item.id} value={item.id}>{item.full_name}</option>
+                      )}
+                    </select>
+                    <button type="button" className="btn"
+                      disabled={busyId === person.id || !assignmentTargets[person.id]}
+                      onClick={() => update(person.id, { role: "sales", supervisor_id: assignmentTargets[person.id] })}>
+                      Jadikan Sales
+                    </button>
+                  </div>
+                ) : "-"}
               </td>
               <td><span className={person.is_active ? "badge green" : "badge red"}>{person.is_active ? "Aktif" : "Nonaktif"}</span></td>
               <td>

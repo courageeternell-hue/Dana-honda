@@ -33,7 +33,7 @@ export default function ConvertProspect(){
    if(error)throw error;
    router.push("/spk");
   }catch(error:any){
-   setErr(error?.message||"Konversi gagal disimpan. Coba lagi.");
+   setErr("Konversi gagal disimpan. Pastikan data valid dan akun memiliki akses, lalu coba lagi.");
   }finally{setSaving(false);}
  }
  return <><Header/><main className="shell"><h1>Konversi Prospek ke SPK</h1><p className="muted">Data konsumen diambil dari prospek dan bisa disesuaikan sebelum disimpan.</p>{err&&<div className="alert">{err}</div>}{form&&<form className="card" onSubmit={save}><div className="formgrid">

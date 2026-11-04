@@ -16,11 +16,11 @@ end $$;
 alter table public.profiles add constraint profiles_role_check check (role in ('sales','supervisor','super_admin'));
 
 create or replace function public.is_super_admin()
-returns boolean language sql stable security definer set search_path=public
+returns boolean language sql stable security definer set search_path=pg_catalog, public
 as $$ select exists(select 1 from public.profiles where id=auth.uid() and role='super_admin' and is_active=true); $$;
 
 create or replace function public.is_supervisor()
-returns boolean language sql stable security definer set search_path=public
+returns boolean language sql stable security definer set search_path=pg_catalog, public
 as $$ select exists(select 1 from public.profiles where id=auth.uid() and role in ('supervisor','super_admin') and is_active=true); $$;
 
 drop policy if exists "supervisor manages profiles" on public.profiles;
@@ -29,18 +29,30 @@ drop policy if exists "profiles self or supervisor read" on public.profiles;
 drop policy if exists "profiles self or active supervisor read" on public.profiles;
 drop policy if exists "profiles self or management read" on public.profiles;
 drop policy if exists "profiles hierarchy read" on public.profiles;
-create policy "profiles hierarchy read" on public.profiles for select
-using (id=auth.uid() or public.is_super_admin() or (role='sales' and supervisor_id=auth.uid() and public.is_supervisor()));
+create policy "profiles hierarchy read" on public.profiles for select to authenticated
+using (id=(select auth.uid()) or public.is_super_admin() or (role='sales' and supervisor_id=(select auth.uid()) and public.is_supervisor()));
 
 drop policy if exists "profiles update own" on public.profiles;
 drop policy if exists "profiles insert own" on public.profiles;
 drop policy if exists "profiles delete own" on public.profiles;
 
-update public.profiles p set role='super_admin', is_active=true, email='courageeternell@gmail.com'
-from auth.users u where p.id=u.id and lower(u.email)='courageeternell@gmail.com';
+-- Ensure the designated Google Super Admin has an application profile.
+-- The Auth identity already exists; preserve its UUID and create/update only its profile.
+insert into public.profiles (id, full_name, role, email, is_active)
+select u.id,
+       coalesce(nullif(trim(u.raw_user_meta_data->>'full_name'), ''), 'Super Admin'),
+       'super_admin',
+       lower(u.email),
+       true
+from auth.users u
+where lower(u.email)='courageeternell@gmail.com'
+on conflict (id) do update
+set role='super_admin',
+    email=excluded.email,
+    is_active=true;
 
 create or replace function public.can_access_sales_data(target_user_id uuid)
-returns boolean language sql stable security definer set search_path=public
+returns boolean language sql stable security definer set search_path=pg_catalog, public
 as $$
  select auth.uid() is not null and exists (
    select 1 from public.profiles me where me.id=auth.uid() and me.is_active=true and (
@@ -74,9 +86,12 @@ drop policy if exists "active users update permitted prospects" on public.prospe
 drop policy if exists "hierarchy read prospects" on public.prospects;
 drop policy if exists "hierarchy update prospects" on public.prospects;
 drop policy if exists "hierarchy delete prospects" on public.prospects;
-create policy "hierarchy read prospects" on public.prospects for select using (public.can_access_sales_data(user_id));
-create policy "hierarchy update prospects" on public.prospects for update using (public.can_access_sales_data(user_id)) with check (public.can_access_sales_data(user_id));
-create policy "hierarchy delete prospects" on public.prospects for delete using (public.can_access_sales_data(user_id));
+create policy "hierarchy read prospects" on public.prospects for select to authenticated using (public.can_access_sales_data(user_id));
+create policy "hierarchy update prospects" on public.prospects for update to authenticated using (public.can_access_sales_data(user_id)) with check (public.can_access_sales_data(user_id));
+create policy "hierarchy delete prospects" on public.prospects for delete to authenticated using (public.can_access_sales_data(user_id));
+drop policy if exists "active users insert own prospects" on public.prospects;
+create policy "active users insert own prospects" on public.prospects for insert to authenticated
+with check (public.is_active_user() and user_id=(select auth.uid()));
 
 drop policy if exists "active users delete permitted spk" on public.spk_records;
 drop policy if exists "active users read permitted spk" on public.spk_records;
@@ -84,11 +99,31 @@ drop policy if exists "active users update permitted spk" on public.spk_records;
 drop policy if exists "hierarchy read spk" on public.spk_records;
 drop policy if exists "hierarchy update spk" on public.spk_records;
 drop policy if exists "hierarchy delete spk" on public.spk_records;
-create policy "hierarchy read spk" on public.spk_records for select using (public.can_access_sales_data(user_id));
-create policy "hierarchy update spk" on public.spk_records for update using (public.can_access_sales_data(user_id)) with check (public.can_access_sales_data(user_id));
-create policy "hierarchy delete spk" on public.spk_records for delete using (public.can_access_sales_data(user_id));
+create policy "hierarchy read spk" on public.spk_records for select to authenticated using (public.can_access_sales_data(user_id));
+create policy "hierarchy update spk" on public.spk_records for update to authenticated using (public.can_access_sales_data(user_id)) with check (public.can_access_sales_data(user_id));
+create policy "hierarchy delete spk" on public.spk_records for delete to authenticated using (public.can_access_sales_data(user_id));
+drop policy if exists "active users insert own spk" on public.spk_records;
+create policy "active users insert own spk" on public.spk_records for insert to authenticated
+with check (public.is_active_user() and user_id=(select auth.uid()));
 
 drop policy if exists "active users read permitted activity logs" on public.activity_logs;
 drop policy if exists "hierarchy read activity logs" on public.activity_logs;
-create policy "hierarchy read activity logs" on public.activity_logs for select
+create policy "hierarchy read activity logs" on public.activity_logs for select to authenticated
 using (public.can_access_sales_data(actor_id));
+
+-- Sales targets are team-scoped; the old supervisor-wide policy exposed every team.
+drop policy if exists "active supervisor manages targets" on public.sales_targets;
+drop policy if exists "active users read permitted targets" on public.sales_targets;
+create policy "hierarchy read sales targets" on public.sales_targets for select to authenticated
+using (public.can_access_sales_data(user_id));
+create policy "hierarchy insert sales targets" on public.sales_targets for insert to authenticated
+with check (public.is_active_user() and public.can_access_sales_data(user_id));
+create policy "hierarchy update sales targets" on public.sales_targets for update to authenticated
+using (public.can_access_sales_data(user_id)) with check (public.can_access_sales_data(user_id));
+create policy "hierarchy delete sales targets" on public.sales_targets for delete to authenticated
+using (public.can_access_sales_data(user_id));
+
+-- Daily reports have no owner/team column, so restrict shared report management to Super Admin.
+drop policy if exists "active supervisor manages daily reports" on public.daily_reports;
+create policy "super admin manages daily reports" on public.daily_reports for all to authenticated
+using (public.is_super_admin()) with check (public.is_super_admin());

@@ -23,8 +23,9 @@ export async function GET(request: NextRequest) {
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);
   if (error) {
-    response.headers.set("location", new URL("/login?error=google", url.origin).toString());
-    return response;
+    const redirect = NextResponse.redirect(new URL("/login?error=google", url.origin));
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
   }
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -43,7 +44,8 @@ export async function GET(request: NextRequest) {
 
   if (profile?.role !== "super_admin" || profile.is_active === false) {
     await supabase.auth.signOut();
-    return NextResponse.redirect(new URL("/login?error=not-allowed", url.origin));
+    response.headers.set("location", new URL("/login?error=not-allowed", url.origin).toString());
+    return response;
   }
 
   return response;

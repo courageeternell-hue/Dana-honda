@@ -38,7 +38,10 @@ export async function POST(request: NextRequest) {
   let supervisorId: string | null = null;
   if (role === "sales") {
     if (ctx.actor.role === "supervisor") supervisorId = ctx.user.id;
-    else if (body.supervisor_id) {
+    else if (ctx.actor.role === "super_admin" && !body.supervisor_id) {
+      return NextResponse.json({ error: "Pilih Supervisor untuk Sales baru agar masuk ke tim yang benar." }, { status: 400 });
+    } else if (body.supervisor_id) {
+      if (!/^[0-9a-f-]{36}$/i.test(body.supervisor_id)) return NextResponse.json({ error: "ID Supervisor tidak valid." }, { status: 400 });
       const { data: supervisor } = await ctx.admin.from("profiles").select("id,role,is_active").eq("id", body.supervisor_id).maybeSingle();
       if (!supervisor || supervisor.role !== "supervisor" || supervisor.is_active === false) {
         return NextResponse.json({ error: "Supervisor tujuan tidak valid atau tidak aktif." }, { status: 400 });
@@ -62,10 +65,11 @@ export async function POST(request: NextRequest) {
     await ctx.admin.auth.admin.deleteUser(created.user.id);
     return NextResponse.json({ error: "Profil gagal disimpan. Pembuatan akun dibatalkan." }, { status: 500 });
   }
-  await ctx.admin.from("activity_logs").insert({
+  const { error: logError } = await ctx.admin.from("activity_logs").insert({
     table_name: "profiles", record_id: created.user.id, actor_id: ctx.user.id,
     action: "create_user", new_data: { full_name: fullName, email, role, supervisor_id: supervisorId }
   });
+  if (logError) console.error("Activity log create_user failed:", logError.message);
   return NextResponse.json({ ok: true, user: { id: created.user.id, full_name: fullName, email, role, is_active: true, supervisor_id: supervisorId } }, { status: 201 });
 }
 
@@ -93,12 +97,18 @@ export async function PATCH(request: NextRequest) {
       const { count, error: countError } = await ctx.admin.from("profiles").select("id", { count: "exact", head: true }).eq("supervisor_id", id);
       if (countError) return NextResponse.json({ error: "Tidak dapat memeriksa anggota tim. Coba lagi." }, { status: 500 });
       if ((count || 0) > 0) return NextResponse.json({ error: "Pindahkan semua Sales ke Supervisor lain sebelum mengubah role akun ini." }, { status: 409 });
+      if (!body.supervisor_id) return NextResponse.json({ error: "Pilih Supervisor aktif untuk akun yang akan diubah menjadi Sales." }, { status: 400 });
     }
     changes.role = body.role;
     if (body.role === "supervisor") changes.supervisor_id = null;
   }
   if (body.is_active !== undefined) {
     if (typeof body.is_active !== "boolean") return NextResponse.json({ error: "Status akun tidak valid." }, { status: 400 });
+    if (target.role === "supervisor" && body.is_active === false) {
+      const { count, error: countError } = await ctx.admin.from("profiles").select("id", { count: "exact", head: true }).eq("supervisor_id", id);
+      if (countError) return NextResponse.json({ error: "Tidak dapat memeriksa anggota tim. Coba lagi." }, { status: 500 });
+      if ((count || 0) > 0) return NextResponse.json({ error: "Pindahkan semua Sales ke Supervisor aktif lain sebelum menonaktifkan akun ini." }, { status: 409 });
+    }
     changes.is_active = body.is_active;
   }
   if (body.full_name !== undefined) {
@@ -108,11 +118,14 @@ export async function PATCH(request: NextRequest) {
   }
   if (body.supervisor_id !== undefined) {
     const resultingRole = body.role !== undefined ? body.role : target.role;
-    if (ctx.actor.role !== "super_admin" || resultingRole !== "sales" || target.role !== "sales") {
-      return NextResponse.json({ error: "Hanya Super Admin yang dapat memindahkan Sales antar tim." }, { status: 403 });
+    const isSalesAssignment = resultingRole === "sales" && (target.role === "sales" || (target.role === "supervisor" && body.role === "sales"));
+    if (ctx.actor.role !== "super_admin" || !isSalesAssignment) {
+      return NextResponse.json({ error: "Hanya Super Admin yang dapat menetapkan Supervisor untuk Sales." }, { status: 403 });
     }
-    if (body.supervisor_id === null || body.supervisor_id === "") changes.supervisor_id = null;
-    else {
+    if (body.supervisor_id === null || body.supervisor_id === "") {
+      return NextResponse.json({ error: "Sales harus tetap memiliki Supervisor aktif. Pilih tim tujuan terlebih dahulu." }, { status: 400 });
+    } else {
+      if (!/^[0-9a-f-]{36}$/i.test(body.supervisor_id)) return NextResponse.json({ error: "ID Supervisor tidak valid." }, { status: 400 });
       const { data: supervisor } = await ctx.admin.from("profiles").select("id,role,is_active").eq("id", body.supervisor_id).maybeSingle();
       if (!supervisor || supervisor.role !== "supervisor" || supervisor.is_active === false) {
         return NextResponse.json({ error: "Supervisor tujuan tidak valid atau tidak aktif." }, { status: 400 });
@@ -125,9 +138,10 @@ export async function PATCH(request: NextRequest) {
   const { data: updated, error } = await ctx.admin.from("profiles").update(changes).eq("id", id)
     .select("id,full_name,email,role,is_active,supervisor_id").single();
   if (error) return NextResponse.json({ error: "Perubahan gagal disimpan." }, { status: 500 });
-  await ctx.admin.from("activity_logs").insert({
+  const { error: logError } = await ctx.admin.from("activity_logs").insert({
     table_name: "profiles", record_id: id, actor_id: ctx.user.id,
     action: "update_user", old_data: target, new_data: updated
   });
+  if (logError) console.error("Activity log update_user failed:", logError.message);
   return NextResponse.json({ ok: true, user: updated });
 }

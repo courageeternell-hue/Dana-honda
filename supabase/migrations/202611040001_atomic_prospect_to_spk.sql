@@ -16,7 +16,7 @@ create or replace function public.convert_prospect_to_spk(
 returns uuid
 language plpgsql
 security invoker
-set search_path = public
+set search_path = pg_catalog, public
 as $$
 declare
   v_owner_id uuid;
@@ -24,14 +24,27 @@ declare
   v_sales_name text;
   v_spk_id uuid;
 begin
-  if auth.uid() is null then
+  if (select auth.uid()) is null then
     raise exception 'Sesi login tidak ditemukan.' using errcode = '42501';
   end if;
-  if p_customer_name is null or length(trim(p_customer_name)) < 1
-     or p_phone is null or length(trim(p_phone)) < 1
-     or p_unit_type is null or length(trim(p_unit_type)) < 1
-     or p_spk_date is null then
-    raise exception 'Data wajib SPK belum lengkap.' using errcode = '22023';
+  if p_customer_name is null or length(trim(p_customer_name)) < 2 or length(trim(p_customer_name)) > 100
+     or p_phone is null or length(trim(p_phone)) < 5 or length(trim(p_phone)) > 30
+     or p_unit_type is null or length(trim(p_unit_type)) < 2 or length(trim(p_unit_type)) > 80
+     or p_spk_date is null
+     or coalesce(p_status, 'Proses') not in ('Jual', 'Proses', 'Indent', 'Tolak', 'Batal')
+     or length(coalesce(p_address, '')) > 500
+     or length(coalesce(p_source, '')) > 120
+     or length(coalesce(p_dp_cash, '')) > 80
+     or length(coalesce(p_leasing, '')) > 100
+     or length(coalesce(p_notes, '')) > 2000 then
+    raise exception 'Data SPK tidak valid atau melebihi batas karakter.' using errcode = '22023';
+  end if;
+
+  if not exists (
+    select 1 from public.profiles
+    where id = (select auth.uid()) and is_active = true
+  ) then
+    raise exception 'Akun tidak aktif.' using errcode = '42501';
   end if;
 
   select user_id, coalesce(spk_created, false)
@@ -43,7 +56,7 @@ begin
   if not found then
     raise exception 'Prospek tidak ditemukan atau tidak dapat diakses.' using errcode = 'P0002';
   end if;
-  if v_owner_id <> auth.uid() then
+  if v_owner_id <> (select auth.uid()) then
     raise exception 'Hanya Sales pemilik prospek yang dapat mengonversinya.' using errcode = '42501';
   end if;
   if v_spk_created then
@@ -51,13 +64,13 @@ begin
   end if;
 
   select coalesce(full_name, '') into v_sales_name
-    from public.profiles where id = auth.uid();
+    from public.profiles where id = (select auth.uid());
 
   insert into public.spk_records (
     user_id, prospect_id, sales_name, spk_date, customer_name, phone,
     address, source, unit_type, dp_cash, leasing, notes, status
   ) values (
-    auth.uid(), p_prospect_id, coalesce(nullif(v_sales_name, ''), ''),
+    (select auth.uid()), p_prospect_id, coalesce(nullif(v_sales_name, ''), ''),
     p_spk_date, trim(p_customer_name), trim(p_phone),
     nullif(trim(coalesce(p_address, '')), ''),
     nullif(trim(coalesce(p_source, '')), ''),
