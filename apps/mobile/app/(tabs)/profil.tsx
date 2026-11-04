@@ -49,9 +49,8 @@ export default function ProfileScreen() {
       const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
       const avatarUrl = data.publicUrl;
       const { error: updateError } = await supabase
-        .from("profiles")
-        .update({ avatar_url: avatarUrl })
-        .eq("id", profile.id);
+        .from("profile_avatars")
+        .upsert({ user_id: profile.id, avatar_url: avatarUrl, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
       if (updateError) throw updateError;
       await reloadProfile();
       Alert.alert("Berhasil", "Foto profil berhasil diperbarui.");
