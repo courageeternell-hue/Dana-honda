@@ -90,6 +90,7 @@ export async function GET(request: NextRequest) {
     if (from) query = query.gte("prospect_date", from);
     if (to) query = query.lte("prospect_date", to);
     if (elevated && salesId) query = query.eq("user_id", salesId);
+    if (!elevated) query = query.eq("user_id", user.id);
     if (prospectStatus) query = query.eq("status", prospectStatus);
     const allRows: any[] = [];
     let offset = 0;
@@ -128,6 +129,7 @@ export async function GET(request: NextRequest) {
     if (from) query = query.gte("spk_date", from);
     if (to) query = query.lte("spk_date", to);
     if (elevated && salesId) query = query.eq("user_id", salesId);
+    if (!elevated) query = query.eq("user_id", user.id);
     if (spkStatus) query = query.eq("status", spkStatus);
     const allRows: any[] = [];
     let offset = 0;
