@@ -4,6 +4,7 @@
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null default '',
+  phone text,
   role text not null default 'sales' check (role in ('sales','supervisor')),
   created_at timestamptz not null default now()
 );
@@ -15,6 +16,7 @@ create table if not exists public.prospects (
   customer_name text not null,
   phone text not null,
   source text,
+  address text,
   follow_up text,
   lead_response text,
   deal_status text not null default 'Belum',
