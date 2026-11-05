@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 
@@ -63,6 +64,7 @@ export default function HomeScreen() {
   return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#D71920" />}>
     <Text style={s.eyebrow}>HONDA SALES</Text><Text style={s.title}>Beranda</Text>
     <Text style={s.subtitle}>Halo, {profile?.full_name || "Sales"}! Ini ringkasan penjualanmu.</Text>
+    {(profile?.role === "admin" || profile?.role === "supervisor") && <Pressable onPress={() => router.push("/admin")} style={s.manageShortcut} accessibilityRole="button" accessibilityLabel="Buka pengelolaan pengguna dan tim"><Text style={s.manageShortcutText}>Kelola Pengguna & Tim ›</Text></Pressable>}
     <View style={s.hero}><Text style={s.heroSmall}>RINGKASAN BULAN INI</Text><Text style={s.heroValue}>{profile?.role === "sales" ? "Aktivitas Saya" : "Aktivitas Tim"}</Text><Text style={s.heroText}>Tarik layar ke bawah untuk memperbarui data.</Text></View>
     <Text style={s.section}>Ringkasan</Text>
     {loading ? <View style={s.loading}><ActivityIndicator color="#D71920" /><Text style={s.loadingText}>Memuat data...</Text></View> : <>
@@ -92,7 +94,7 @@ export default function HomeScreen() {
 const s = StyleSheet.create({
   page:{flex:1,backgroundColor:"#F7F7F7"},content:{padding:22,paddingTop:28,paddingBottom:32},
   eyebrow:{fontSize:11,fontWeight:"800",letterSpacing:1.5,color:"#D71920"},title:{fontSize:29,fontWeight:"800",color:"#202033",marginTop:8},
-  subtitle:{fontSize:14,color:"#77778A",marginTop:5},hero:{backgroundColor:"#D71920",borderRadius:22,padding:22,marginTop:24},
+  subtitle:{fontSize:14,color:"#77778A",marginTop:5},manageShortcut:{alignSelf:"flex-start",backgroundColor:"#D71920",paddingHorizontal:15,paddingVertical:11,borderRadius:11,marginTop:14},manageShortcutText:{fontSize:12,fontWeight:"800",color:"#FFFFFF"},hero:{backgroundColor:"#D71920",borderRadius:22,padding:22,marginTop:24},
   heroSmall:{color:"#FFE3E3",fontSize:10,fontWeight:"800",letterSpacing:1.2},heroValue:{color:"#FFFFFF",fontSize:24,fontWeight:"800",marginTop:12},
   heroText:{color:"#FFE3E3",fontSize:13,lineHeight:20,marginTop:6},section:{fontSize:17,fontWeight:"800",color:"#242438",marginTop:26,marginBottom:13},
   grid:{flexDirection:"row",flexWrap:"wrap",gap:12},stat:{width:"48%",flexGrow:1,backgroundColor:"#FFFFFF",borderRadius:17,padding:16,borderWidth:1,borderColor:"#EEEEEE"},
