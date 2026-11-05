@@ -27,12 +27,13 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 async function getProfile(userId: string): Promise<UserProfile> {
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, full_name, email, role, is_active")
+    .select("id, full_name, email, phone, role, is_active")
     .eq("id", userId)
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
-  if (!data || !data.is_active) throw new Error("Akun belum aktif. Hubungi administrator.");
+  if (!data) throw new Error("Akun belum tersedia. Hubungi Admin/Supervisor.");
+  if (!data.is_active) throw new Error("Akun belum aktif. Hubungi administrator.");
   if (!["admin", "supervisor", "sales"].includes(data.role)) {
     throw new Error("Role akun tidak dikenali. Hubungi administrator.");
   }
@@ -119,11 +120,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     profile,
     loading,
     async signIn(email, password) {
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
+      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (error) throw error;
+      try { await getProfile(data.user.id); } catch (profileError) { await supabase.auth.signOut(); throw profileError; }
     },
     async signOut() {
       const { error } = await supabase.auth.signOut();
