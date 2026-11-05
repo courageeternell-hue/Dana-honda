@@ -175,16 +175,36 @@ export default function AdminDashboard() {
 
   const memberName = (id: string) => members.find(m => m.id === id)?.full_name || "Sales tidak diketahui";
   const todayKey = dateKey(new Date());
-  const overdueFollowUps = supervisorProspects.filter(p => p.follow_up && p.follow_up < todayKey && !p.spk_created && !["Deal","Batal","Tidak Tertarik"].includes(p.deal_status || ""));
-  const pendingProspects = supervisorProspects.filter(p => !p.spk_created && !["Deal","Batal","Tidak Tertarik"].includes(p.deal_status || "") && (p.status || "").toLowerCase() !== "deal");
-  const periodStart = (() => {
+  const terminalDealStatuses = ["deal", "batal", "tidak tertarik"];
+  const overdueFollowUps = supervisorProspects.filter(p => {
+    const dueDate = typeof p.follow_up === "string" ? p.follow_up.slice(0, 10) : "";
+    const dealStatus = String(p.deal_status || "").trim().toLowerCase();
+    const leadStatus = String(p.status || "").trim().toLowerCase();
+    return /^\d{4}-\d{2}-\d{2}$/.test(dueDate) && dueDate < todayKey && !p.spk_created && !terminalDealStatuses.includes(dealStatus) && leadStatus !== "deal";
+  });
+  const pendingProspects = supervisorProspects.filter(p => {
+    const dealStatus = String(p.deal_status || "").trim().toLowerCase();
+    const leadStatus = String(p.status || "").trim().toLowerCase();
+    return !p.spk_created && !terminalDealStatuses.includes(dealStatus) && leadStatus !== "deal";
+  });
+  const periodRange = (() => {
     const now = new Date();
-    if (reportPeriod === "daily") return dateKey(now);
-    if (reportPeriod === "weekly") { const d = new Date(now); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return dateKey(d); }
-    return dateKey(new Date(now.getFullYear(), now.getMonth(), 1));
+    if (reportPeriod === "daily") {
+      const start = dateKey(now);
+      return { start, end: dateKey(new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)) };
+    }
+    if (reportPeriod === "weekly") {
+      const startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - ((startDate.getDay() + 6) % 7));
+      const endDate = new Date(startDate);
+      endDate.setDate(endDate.getDate() + 7);
+      return { start: dateKey(startDate), end: dateKey(endDate) };
+    }
+    return { start: dateKey(new Date(now.getFullYear(), now.getMonth(), 1)), end: dateKey(new Date(now.getFullYear(), now.getMonth() + 1, 1)) };
   })();
-  const filteredProspects = supervisorProspects.filter(p => p.prospect_date >= periodStart && (salesFilter === "all" || p.user_id === salesFilter));
-  const filteredSpks = supervisorSpks.filter(p => p.spk_date >= periodStart && (salesFilter === "all" || p.user_id === salesFilter));
+  const periodStart = periodRange.start;
+  const filteredProspects = supervisorProspects.filter(p => p.prospect_date >= periodRange.start && p.prospect_date < periodRange.end && (salesFilter === "all" || p.user_id === salesFilter));
+  const filteredSpks = supervisorSpks.filter(p => p.spk_date >= periodRange.start && p.spk_date < periodRange.end && (salesFilter === "all" || p.user_id === salesFilter));
   async function exportSupervisorReport(kind: "prospects" | "spk") {
     try {
       const rows = kind === "prospects" ? [
@@ -205,19 +225,26 @@ export default function AdminDashboard() {
     } catch(e){Alert.alert("Export gagal",e instanceof Error?e.message:"Gagal membuat laporan.");}
   }
   async function saveCorrection() {
-    if(!correctionTarget || !correctionNote.trim()) return;
+    if (!correctionTarget || !correctionNote.trim()) return;
     setSavingCorrection(true);
     try {
-      const table=correctionTarget.table;
-      const {data:oldRow,error:readError}=await supabase.from(table).select("*").eq("id",correctionTarget.id).single();
-      if(readError) throw readError;
-      const {error:updateError}=await supabase.from(table).update({notes:[oldRow.notes, "[Catatan Supervisor] "+correctionNote.trim()].filter(Boolean).join("\\n"),updated_at:new Date().toISOString()}).eq("id",correctionTarget.id);
-      if(updateError) throw updateError;
-      const {data:userData}=await supabase.auth.getUser();
-      if(userData.user) await supabase.from("activity_logs").insert({table_name:table,record_id:correctionTarget.id,actor_id:userData.user.id,action:"supervisor_note",old_data:oldRow,new_data:{...oldRow,supervisor_note:correctionNote.trim()}});
-      setCorrectionTarget(null);setCorrectionNote("");await loadSupervisorData();Alert.alert("Tersimpan","Catatan pengawasan berhasil ditambahkan.");
-    } catch(e){Alert.alert("Gagal menyimpan",e instanceof Error?e.message:"Coba lagi.");}
-    finally{setSavingCorrection(false);}
+      const table = correctionTarget.table;
+      const { data: oldRow, error: readError } = await supabase.from(table).select("*").eq("id", correctionTarget.id).single();
+      if (readError) throw readError;
+      const { error: updateError } = await supabase.from(table)
+        .update({ notes: [oldRow.notes, "[Catatan Supervisor] " + correctionNote.trim()].filter(Boolean).join("\n"), updated_at: new Date().toISOString() })
+        .eq("id", correctionTarget.id).select("id").single();
+      if (updateError) throw updateError;
+      // The database trigger automatically writes this update to activity_logs.
+      setCorrectionTarget(null);
+      setCorrectionNote("");
+      await loadSupervisorData();
+      Alert.alert("Tersimpan", "Catatan pengawasan berhasil ditambahkan.");
+    } catch (e) {
+      Alert.alert("Gagal menyimpan", e instanceof Error ? e.message : "Coba lagi.");
+    } finally {
+      setSavingCorrection(false);
+    }
   }
 
   function openUserModal() { setDraftUser(blankUser); setUserModal(true); }
@@ -277,7 +304,7 @@ export default function AdminDashboard() {
 
   if (profile?.role !== "admin" && profile?.role !== "supervisor") return <Redirect href="/(tabs)" />;
 
-  return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} tintColor="#D71920" />}>
+  return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void Promise.all([load(), loadSupervisorData()]); }} tintColor="#D71920" />}>
     <Pressable onPress={() => router.back()}><Text style={s.back}>‹ Kembali ke Profil</Text></Pressable>
     <View style={s.headerRow}><View style={{ flex: 1 }}><Text style={s.title}>Dasbor {profile.role === "admin" ? "Admin" : "Supervisor"}</Text><Text style={s.subtitle}>Performa tim dan manajemen pengguna.</Text></View></View>
     {loading ? <View style={s.loading}><ActivityIndicator color="#D71920" /><Text style={s.muted}>Memuat data tim...</Text></View> : <>
@@ -287,8 +314,8 @@ export default function AdminDashboard() {
         <View style={s.summaryItem}><Text style={s.summaryValue}>{totals.closing}</Text><Text style={s.summaryText}>Closing</Text></View>
       </View></View>
       {!!error && <Text style={s.error}>{error}</Text>}
-      <View style={s.actionRow}>
-        <Pressable style={s.primaryButton} onPress={openUserModal} accessibilityRole="button" accessibilityLabel="Tambah pengguna"><Text style={s.primaryText}>+ Tambah Pengguna</Text></Pressable>
+        <View style={s.actionRow}>
+        {profile.role === "admin" && <Pressable style={s.primaryButton} onPress={openUserModal} accessibilityRole="button" accessibilityLabel="Tambah pengguna"><Text style={s.primaryText}>+ Tambah Pengguna</Text></Pressable>}
         <Pressable style={s.exportButton} onPress={() => router.push("/target")}><Text style={s.exportText}>Atur Target</Text></Pressable>
         <Pressable style={s.exportButton} onPress={exportExcel}><Text style={s.exportText}>↓ Excel</Text></Pressable>
       </View>
@@ -303,11 +330,11 @@ export default function AdminDashboard() {
         <Text style={s.section}>Laporan Tim</Text>
         <View style={s.choices}>{(["daily","weekly","monthly"] as const).map(v=><Pressable key={v} onPress={()=>setReportPeriod(v)} style={[s.choice,reportPeriod===v&&s.choiceActive]}><Text style={[s.choiceText,reportPeriod===v&&s.choiceTextActive]}>{v==="daily"?"Harian":v==="weekly"?"Mingguan":"Bulanan"}</Text></Pressable>)}</View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop:10}}><View style={s.choices}><Pressable onPress={()=>setSalesFilter("all")} style={[s.choice,salesFilter==="all"&&s.choiceActive]}><Text style={s.choiceText}>Semua Sales</Text></Pressable>{members.filter(m=>m.role==="sales").map(m=><Pressable key={m.id} onPress={()=>setSalesFilter(m.id)} style={[s.choice,salesFilter===m.id&&s.choiceActive]}><Text style={s.choiceText}>{m.full_name}</Text></Pressable>)}</View></ScrollView>
-        <View style={s.memberCard}><Text style={s.memberStat}>Periode mulai {periodStart}</Text><Text style={s.memberName}>{filteredProspects.length} Prospek • {filteredSpks.length} SPK</Text><Text style={s.memberEmail}>Filter: {salesFilter==="all"?"Semua sales":memberName(salesFilter)}</Text><View style={s.actionRow}><Pressable style={s.exportButton} onPress={()=>void exportSupervisorReport("prospects")}><Text style={s.exportText}>Excel Prospek Tim</Text></Pressable><Pressable style={s.exportButton} onPress={()=>void exportSupervisorReport("spk")}><Text style={s.exportText}>Excel SPK Tim</Text></Pressable></View></View>
+        <View style={s.memberCard}><Text style={s.memberStat}>Periode {periodRange.start} s.d. {new Date(new Date(periodRange.end + "T00:00:00").getTime() - 86400000).toISOString().slice(0, 10)}</Text><Text style={s.memberName}>{filteredProspects.length} Prospek • {filteredSpks.length} SPK</Text><Text style={s.memberEmail}>Filter: {salesFilter==="all"?"Semua sales":memberName(salesFilter)}</Text><View style={s.actionRow}><Pressable style={s.exportButton} onPress={()=>void exportSupervisorReport("prospects")}><Text style={s.exportText}>Excel Prospek Tim</Text></Pressable><Pressable style={s.exportButton} onPress={()=>void exportSupervisorReport("spk")}><Text style={s.exportText}>Excel SPK Tim</Text></Pressable></View></View>
         <Text style={s.section}>Pemantauan Status Calon Konsumen</Text>
-        {pendingProspects.slice(0,15).map(p=><View key={p.id} style={s.memberCard}><Text style={s.memberName}>{p.customer_name}</Text><Text style={s.memberEmail}>{memberName(p.user_id)} • {p.prospect_date}</Text><Text style={s.memberEmail}>Status: {p.status||"Belum Respon"} • Deal: {p.deal_status||"Belum"}</Text><Pressable onPress={()=>{setCorrectionTarget({id:p.id,table:"prospects",label:p.customer_name});setCorrectionNote("");}} style={s.manageButton}><Text style={s.manageText}>Catatan / koreksi</Text></Pressable></View>)}
+        {pendingProspects.slice(0,15).map(p=><View key={p.id} style={s.memberCard}><Text style={s.memberName}>{p.customer_name}</Text><Text style={s.memberEmail}>{memberName(p.user_id)} • {p.prospect_date}</Text><Text style={s.memberEmail}>Status: {p.status||"Belum Respon"} • Deal: {p.deal_status||"Belum"}</Text><Pressable onPress={()=>{setCorrectionTarget({id:p.id,table:"prospects",label:p.customer_name});setCorrectionNote("");}} style={s.manageButton}><Text style={s.manageText}>Beri catatan</Text></Pressable></View>)}
         <Text style={s.section}>Pengawasan Data SPK</Text>
-        {supervisorSpks.slice(0,10).map(p=><View key={p.id} style={s.memberCard}><Text style={s.memberName}>{p.customer_name} • {p.unit_type}</Text><Text style={s.memberEmail}>{p.sales_name||memberName(p.user_id)} • {p.spk_date} • {p.status}</Text><Pressable onPress={()=>{setCorrectionTarget({id:p.id,table:"spk_records",label:p.customer_name});setCorrectionNote("");}} style={s.manageButton}><Text style={s.manageText}>Catatan / koreksi</Text></Pressable></View>)}
+        {supervisorSpks.slice(0,10).map(p=><View key={p.id} style={s.memberCard}><Text style={s.memberName}>{p.customer_name} • {p.unit_type}</Text><Text style={s.memberEmail}>{p.sales_name||memberName(p.user_id)} • {p.spk_date} • {p.status}</Text><Pressable onPress={()=>{setCorrectionTarget({id:p.id,table:"spk_records",label:p.customer_name});setCorrectionNote("");}} style={s.manageButton}><Text style={s.manageText}>Beri catatan</Text></Pressable></View>)}
         <Text style={s.section}>Riwayat Perubahan Data</Text>
         {activityLogs.slice(0,20).map(log=><View key={log.id} style={s.memberCard}><Text style={s.memberName}>{log.action} • {log.table_name}</Text><Text style={s.memberEmail}>Aktor: {memberName(log.actor_id)} • {new Date(log.created_at).toLocaleString("id-ID")}</Text></View>)}
         <Modal visible={!!correctionTarget} transparent animationType="slide" onRequestClose={()=>setCorrectionTarget(null)}><View style={s.overlay}><View style={s.sheet}><Text style={s.sheetTitle}>Catatan pengawasan</Text><Text style={s.memberEmail}>{correctionTarget?.label}</Text><TextInput multiline value={correctionNote} onChangeText={setCorrectionNote} placeholder="Tulis catatan atau koreksi untuk sales..." style={[s.input,{height:110,textAlignVertical:"top",paddingTop:12}]} /><Pressable disabled={savingCorrection||!correctionNote.trim()} onPress={()=>void saveCorrection()} style={s.save}>{savingCorrection?<ActivityIndicator color="#FFF"/>:<Text style={s.saveText}>Simpan catatan</Text>}</Pressable><Pressable onPress={()=>setCorrectionTarget(null)} style={s.cancel}><Text style={s.cancelText}>Batal</Text></Pressable></View></View></Modal>
