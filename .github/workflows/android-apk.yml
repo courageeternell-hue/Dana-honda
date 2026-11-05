@@ -50,16 +50,33 @@ jobs:
           EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
         run: npx expo prebuild --platform android --non-interactive
 
-      - name: Assemble release APK
+      - name: Assemble and sign installable APK
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
           EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-        run: cd android && ./gradlew assembleRelease --no-daemon --stacktrace
+        run: |
+          cd android
+          ./gradlew clean assembleRelease --no-daemon --stacktrace
+          APK="app/build/outputs/apk/release/app-release.apk"
+          test -f "$APK"
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)
+          ZIPALIGN=$(find "$ANDROID_HOME/build-tools" -name zipalign -type f | sort -V | tail -1)
+          test -x "$APKSIGNER"
+          test -x "$ZIPALIGN"
+          mkdir -p app/build/outputs/apk/release/final
+          "$ZIPALIGN" -f -p 4 "$APK" app/build/outputs/apk/release/final/app-release-aligned.apk
+          KEYSTORE="$HOME/.android/debug.keystore"
+          if [ ! -f "$KEYSTORE" ]; then
+            mkdir -p "$HOME/.android"
+            keytool -genkeypair -v -keystore "$KEYSTORE" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          "$APKSIGNER" sign --ks "$KEYSTORE" --ks-pass pass:android --ks-key-alias androiddebugkey --key-pass pass:android --out app/build/outputs/apk/release/final/Asisten-Sales.apk app/build/outputs/apk/release/final/app-release-aligned.apk
+          "$APKSIGNER" verify --verbose app/build/outputs/apk/release/final/Asisten-Sales.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: asisten-sales-android-apk
-          path: apps/mobile/android/app/build/outputs/apk/release/*.apk
+          path: apps/mobile/android/app/build/outputs/apk/release/final/Asisten-Sales.apk
           if-no-files-found: error
           retention-days: 14
