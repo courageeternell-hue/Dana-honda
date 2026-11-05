@@ -1,104 +1,49 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 
-type Metrics = { prospects: number; spk: number; closing: number; prospectTarget: number; spkTarget: number };
-const empty: Metrics = { prospects: 0, spk: 0, closing: 0, prospectTarget: 0, spkTarget: 0 };
-
-function dateKey(date: Date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
+type Metrics = { prospects:number; spk:number; closing:number; prospectTarget:number; spkTarget:number };
+const empty:Metrics={prospects:0,spk:0,closing:0,prospectTarget:0,spkTarget:0};
+function dateKey(date:Date){const y=date.getFullYear();const m=String(date.getMonth()+1).padStart(2,"0");const d=String(date.getDate()).padStart(2,"0");return `${y}-${m}-${d}`;}
+function Stat({label,value,note,icon}:{label:string;value:string;note:string;icon:keyof typeof Ionicons.glyphMap}){return <View style={s.stat}><View style={s.statTop}><View style={s.statIcon}><Ionicons name={icon} size={18} color="#E60012"/></View><Text style={s.statNote}>{note}</Text></View><Text style={s.statValue}>{value}</Text><Text style={s.statLabel}>{label}</Text></View>;}
+export default function HomeScreen(){
+ const {profile}=useAuth();const [metrics,setMetrics]=useState<Metrics>(empty);const [loading,setLoading]=useState(true);const [refreshing,setRefreshing]=useState(false);const [error,setError]=useState("");
+ const loadMetrics=useCallback(async()=>{if(!profile)return;setError("");const now=new Date();const start=dateKey(new Date(now.getFullYear(),now.getMonth(),1));const next=dateKey(new Date(now.getFullYear(),now.getMonth()+1,1));try{const [p,spk,c,t]=await Promise.all([supabase.from("prospects").select("id",{count:"exact",head:true}).gte("prospect_date",start).lt("prospect_date",next),supabase.from("spk_records").select("id",{count:"exact",head:true}).gte("spk_date",start).lt("spk_date",next),supabase.from("spk_records").select("id",{count:"exact",head:true}).eq("status","Jual").gte("spk_date",start).lt("spk_date",next),supabase.from("sales_targets").select("prospect_target,spk_target").gte("target_month",start).lt("target_month",next)]);const failed=[p.error,spk.error,c.error,t.error].find(Boolean);if(failed)throw failed;const rows=t.data??[];setMetrics({prospects:p.count??0,spk:spk.count??0,closing:c.count??0,prospectTarget:rows.reduce((n,x)=>n+(x.prospect_target??0),0),spkTarget:rows.reduce((n,x)=>n+(x.spk_target??0),0)});}catch(e){setError(e instanceof Error?e.message:"Gagal memuat ringkasan.");}finally{setLoading(false);setRefreshing(false);}},[profile]);
+ useEffect(()=>{loadMetrics();},[loadMetrics]);const refresh=()=>{setRefreshing(true);loadMetrics();};
+ const first=(profile?.full_name||"Sales").trim().split(/\s+/)[0];
+ return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#E60012"/>}>
+  <View style={s.top}><View><Text style={s.eyebrow}>ASISTEN SALES</Text><Text style={s.greeting}>Halo, {first}</Text><Text style={s.subtitle}>Semangat capai target hari ini!</Text></View><Pressable onPress={()=>router.push("/(tabs)/profil")} style={s.avatar}><Text style={s.avatarText}>{(profile?.full_name||"S").slice(0,1).toUpperCase()}</Text></Pressable></View>
+  {(profile?.role==="admin"||profile?.role==="supervisor")&&<Pressable onPress={()=>router.push("/admin")} style={s.manage}><Ionicons name="people-outline" color="#FFF" size={17}/><Text style={s.manageText}>Kelola Pengguna & Tim</Text><Ionicons name="chevron-forward" color="#FFF" size={17}/></Pressable>}
+  <View style={s.hero}><View style={s.heroCopy}><Text style={s.heroEyebrow}>PERFORMA BULAN INI</Text><Text style={s.heroTitle}>Total Prospek</Text><Text style={s.heroNumber}>{loading?"—":metrics.prospects}</Text><Text style={s.heroFoot}>Pantau setiap peluang menjadi penjualan.</Text></View><View style={s.heroArt}><Ionicons name="trending-up" size={58} color="rgba(255,255,255,.22)"/><View style={s.heroBadge}><Text style={s.heroBadgeText}>SALES</Text></View></View></View>
+  <Text style={s.section}>Menu Utama</Text>
+  <View style={s.menuGrid}>
+   <Pressable style={s.menuCard} onPress={()=>router.push("/(tabs)/prospek")}><View style={s.menuIcon}><Ionicons name="people" size={23} color="#E60012"/></View><Text style={s.menuTitle}>Prospek</Text><Text style={s.menuSub}>Kelola pelanggan</Text></Pressable>
+   <Pressable style={s.menuCard} onPress={()=>router.push("/(tabs)/spk")}><View style={s.menuIcon}><Ionicons name="document-text" size={23} color="#E60012"/></View><Text style={s.menuTitle}>SPK</Text><Text style={s.menuSub}>Data pemesanan</Text></Pressable>
+   <Pressable style={s.menuCard} onPress={()=>router.push("/admin")}><View style={s.menuIcon}><Ionicons name="bar-chart" size={23} color="#E60012"/></View><Text style={s.menuTitle}>Dashboard</Text><Text style={s.menuSub}>Ringkasan tim</Text></Pressable>
+  </View>
+  <View style={s.promo}><View style={s.promoText}><Text style={s.promoEyebrow}>HONDA • ONE HEART.</Text><Text style={s.promoTitle}>Satu hati, satu tujuan.</Text><Text style={s.promoSub}>Berikan pelayanan terbaik untuk setiap konsumen.</Text></View><View style={s.motorArt}><Ionicons name="bicycle" size={57} color="#FFF"/><Ionicons name="flash" size={21} color="#FFD9DC"/></View></View>
+  <Text style={s.section}>Ringkasan Aktivitas</Text>
+  {loading?<View style={s.loading}><ActivityIndicator color="#E60012"/><Text style={s.muted}>Memuat data...</Text></View>:<View style={s.stats}>
+   <Stat label="Total Prospek" value={String(metrics.prospects)} note="Bulan ini" icon="people-outline"/>
+   <Stat label="SPK Masuk" value={String(metrics.spk)} note="Bulan ini" icon="document-text-outline"/>
+   <Stat label="Closing" value={String(metrics.closing)} note="Status jual" icon="checkmark-circle-outline"/>
+   <Stat label="Target SPK" value={metrics.spkTarget?String(metrics.spkTarget):"—"} note="Target bulan ini" icon="flag-outline"/>
+  </View>}
+  {!!error&&<Text style={s.error}>Data belum bisa dimuat: {error}</Text>}
+  <View style={s.targetCard}><View style={s.targetHeading}><Text style={s.targetTitle}>Pencapaian Target</Text><Ionicons name="analytics-outline" size={20} color="#E60012"/></View><Text style={s.targetLabel}>Prospek: {metrics.prospects} / {metrics.prospectTarget||"Belum diatur"}</Text><View style={s.track}><View style={[s.fill,{width:`${metrics.prospectTarget?Math.min(100,metrics.prospects/metrics.prospectTarget*100):0}%`}]}/></View><Text style={s.targetLabel}>SPK: {metrics.spk} / {metrics.spkTarget||"Belum diatur"}</Text><View style={s.track}><View style={[s.fill,{width:`${metrics.spkTarget?Math.min(100,metrics.spk/metrics.spkTarget*100):0}%`}]}/></View><Text style={s.muted}>Target ditentukan oleh Admin atau Supervisor.</Text></View>
+ </ScrollView>;
 }
-
-function Stat({ label, value, note }: { label: string; value: string; note: string }) {
-  return <View style={s.stat}><Text style={s.statLabel}>{label}</Text><Text style={s.statValue}>{value}</Text><Text style={s.statNote}>{note}</Text></View>;
-}
-
-export default function HomeScreen() {
-  const { profile } = useAuth();
-  const [metrics, setMetrics] = useState<Metrics>(empty);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState("");
-
-  const loadMetrics = useCallback(async () => {
-    if (!profile) return;
-    setError("");
-    const now = new Date();
-    const monthStart = dateKey(new Date(now.getFullYear(), now.getMonth(), 1));
-    const nextMonth = dateKey(new Date(now.getFullYear(), now.getMonth() + 1, 1));
-    try {
-      const [prospects, spk, closing, targets] = await Promise.all([
-        supabase.from("prospects").select("id", { count: "exact", head: true }).gte("prospect_date", monthStart).lt("prospect_date", nextMonth),
-        supabase.from("spk_records").select("id", { count: "exact", head: true }).gte("spk_date", monthStart).lt("spk_date", nextMonth),
-        supabase.from("spk_records").select("id", { count: "exact", head: true }).eq("status", "Jual").gte("spk_date", monthStart).lt("spk_date", nextMonth),
-        supabase.from("sales_targets").select("prospect_target, spk_target").gte("target_month", monthStart).lt("target_month", nextMonth),
-      ]);
-      const failed = [prospects.error, spk.error, closing.error, targets.error].find(Boolean);
-      if (failed) throw failed;
-      const targetRows = targets.data ?? [];
-      setMetrics({
-        prospects: prospects.count ?? 0,
-        spk: spk.count ?? 0,
-        closing: closing.count ?? 0,
-        prospectTarget: targetRows.reduce((sum, row) => sum + (row.prospect_target ?? 0), 0),
-        spkTarget: targetRows.reduce((sum, row) => sum + (row.spk_target ?? 0), 0),
-      });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Gagal memuat ringkasan.");
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [profile]);
-
-  useEffect(() => { loadMetrics(); }, [loadMetrics]);
-  const refresh = () => { setRefreshing(true); loadMetrics(); };
-  const prospectProgress = metrics.prospectTarget > 0 ? Math.min(100, Math.round(metrics.prospects / metrics.prospectTarget * 100)) : 0;
-  const spkProgress = metrics.spkTarget > 0 ? Math.min(100, Math.round(metrics.spk / metrics.spkTarget * 100)) : 0;
-
-  return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#D71920" />}>
-    <Text style={s.eyebrow}>HONDA SALES</Text><Text style={s.title}>Beranda</Text>
-    <Text style={s.subtitle}>Halo, {profile?.full_name || "Sales"}! Ini ringkasan penjualanmu.</Text>
-    {(profile?.role === "admin" || profile?.role === "supervisor") && <Pressable onPress={() => router.push("/admin")} style={s.manageShortcut} accessibilityRole="button" accessibilityLabel="Buka pengelolaan pengguna dan tim"><Text style={s.manageShortcutText}>Kelola Pengguna & Tim ›</Text></Pressable>}
-    <View style={s.hero}><Text style={s.heroSmall}>RINGKASAN BULAN INI</Text><Text style={s.heroValue}>{profile?.role === "sales" ? "Aktivitas Saya" : "Aktivitas Tim"}</Text><Text style={s.heroText}>Tarik layar ke bawah untuk memperbarui data.</Text></View>
-    <Text style={s.section}>Ringkasan</Text>
-    {loading ? <View style={s.loading}><ActivityIndicator color="#D71920" /><Text style={s.loadingText}>Memuat data...</Text></View> : <>
-      <View style={s.grid}>
-        <Stat label="Prospek" value={String(metrics.prospects)} note="Bulan ini" />
-        <Stat label="SPK" value={String(metrics.spk)} note="Bulan ini" />
-        <Stat label="Closing" value={String(metrics.closing)} note="SPK status jual" />
-        <Stat label="Target SPK" value={metrics.spkTarget ? String(metrics.spkTarget) : "—"} note="Target bulan ini" />
-      </View>
-      {!!error && <Text style={s.error}>Data belum bisa dimuat: {error}</Text>}
-    </>}
-    <Text style={s.section}>Target bulan ini</Text>
-    <View style={s.targetCard}>
-      <View style={s.progressHeader}><Text style={s.targetLabel}>Target prospek</Text><Text style={s.progressPercent}>{metrics.prospectTarget ? `${prospectProgress}%` : "—"}</Text></View>
-      <Text style={s.targetValue}>{metrics.prospects} / {metrics.prospectTarget || "Belum diatur"}</Text>
-      <View style={s.progressTrack}><View style={[s.progressFill,{width:`${prospectProgress}%`}]}/></View>
-      <Text style={s.targetHint}>Pencapaian prospek bulan ini</Text>
-      <View style={[s.progressHeader,{marginTop:18}]}><Text style={s.targetLabel}>Target SPK</Text><Text style={s.progressPercent}>{metrics.spkTarget ? `${spkProgress}%` : "—"}</Text></View>
-      <Text style={s.targetValue}>{metrics.spk} / {metrics.spkTarget || "Belum diatur"}</Text>
-      <View style={s.progressTrack}><View style={[s.progressFill,{width:`${spkProgress}%`}]}/></View>
-      <Text style={s.targetHint}>Pencapaian SPK bulan ini</Text>
-      <Text style={[s.targetHint,{marginTop:12}]}>Target ditentukan oleh Admin atau Supervisor.</Text>
-    </View>
-  </ScrollView>;
-}
-
-const s = StyleSheet.create({
-  page:{flex:1,backgroundColor:"#F7F7F7"},content:{padding:22,paddingTop:28,paddingBottom:32},
-  eyebrow:{fontSize:11,fontWeight:"800",letterSpacing:1.5,color:"#D71920"},title:{fontSize:29,fontWeight:"800",color:"#202033",marginTop:8},
-  subtitle:{fontSize:14,color:"#77778A",marginTop:5},manageShortcut:{alignSelf:"flex-start",backgroundColor:"#D71920",paddingHorizontal:15,paddingVertical:11,borderRadius:11,marginTop:14},manageShortcutText:{fontSize:12,fontWeight:"800",color:"#FFFFFF"},hero:{backgroundColor:"#D71920",borderRadius:22,padding:22,marginTop:24},
-  heroSmall:{color:"#FFE3E3",fontSize:10,fontWeight:"800",letterSpacing:1.2},heroValue:{color:"#FFFFFF",fontSize:24,fontWeight:"800",marginTop:12},
-  heroText:{color:"#FFE3E3",fontSize:13,lineHeight:20,marginTop:6},section:{fontSize:17,fontWeight:"800",color:"#242438",marginTop:26,marginBottom:13},
-  grid:{flexDirection:"row",flexWrap:"wrap",gap:12},stat:{width:"48%",flexGrow:1,backgroundColor:"#FFFFFF",borderRadius:17,padding:16,borderWidth:1,borderColor:"#EEEEEE"},
-  statLabel:{fontSize:12,color:"#77778A",fontWeight:"600"},statValue:{fontSize:25,fontWeight:"800",color:"#26263B",marginTop:8},statNote:{fontSize:11,color:"#9A9AAA",marginTop:4},
-  loading:{padding:28,alignItems:"center",gap:10},loadingText:{fontSize:12,color:"#858597"},error:{fontSize:12,color:"#B74747",marginTop:12,lineHeight:18},
-  targetCard:{backgroundColor:"#FFF",borderRadius:17,padding:18,borderWidth:1,borderColor:"#EEEEEE"},progressHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},targetLabel:{fontSize:12,color:"#77778A",fontWeight:"700"},progressPercent:{fontSize:12,color:"#D71920",fontWeight:"900"},targetValue:{fontSize:24,fontWeight:"800",color:"#26263B",marginTop:7},progressTrack:{height:9,backgroundColor:"#F0F0F0",borderRadius:9,overflow:"hidden",marginTop:10},progressFill:{height:9,backgroundColor:"#D71920",borderRadius:9},targetHint:{fontSize:11,color:"#9A9AAA",marginTop:4}
+const s=StyleSheet.create({
+ page:{flex:1,backgroundColor:"#F6F6F7"},content:{padding:20,paddingTop:25,paddingBottom:35},
+ top:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},eyebrow:{fontSize:10,fontWeight:"900",letterSpacing:1.8,color:"#E60012"},greeting:{fontSize:27,fontWeight:"900",fontStyle:"italic",color:"#1F1F25",marginTop:5},subtitle:{fontSize:12,color:"#85858F",marginTop:4},
+ avatar:{width:46,height:46,borderRadius:16,backgroundColor:"#FCE8EA",alignItems:"center",justifyContent:"center",borderWidth:2,borderColor:"#FFF"},avatarText:{fontSize:19,fontWeight:"900",color:"#E60012"},
+ manage:{height:43,backgroundColor:"#E60012",borderRadius:13,marginTop:16,paddingHorizontal:13,flexDirection:"row",alignItems:"center",gap:9},manageText:{flex:1,color:"#FFF",fontSize:12,fontWeight:"800"},
+ hero:{marginTop:23,backgroundColor:"#E60012",borderRadius:23,padding:21,flexDirection:"row",overflow:"hidden",minHeight:155},heroCopy:{flex:1},heroEyebrow:{fontSize:9,color:"#FFE3E5",fontWeight:"900",letterSpacing:1.4},heroTitle:{fontSize:17,color:"#FFF",fontWeight:"800",marginTop:12},heroNumber:{fontSize:38,color:"#FFF",fontWeight:"900",fontStyle:"italic",marginTop:1},heroFoot:{fontSize:10,color:"#FFE3E5",marginTop:2},heroArt:{width:92,alignItems:"center",justifyContent:"center"},heroBadge:{borderWidth:1,borderColor:"rgba(255,255,255,.45)",paddingHorizontal:10,paddingVertical:4,borderRadius:20,marginTop:5},heroBadgeText:{fontSize:9,color:"#FFF",fontWeight:"900",letterSpacing:1.4},
+ section:{fontSize:17,fontWeight:"900",color:"#24242B",marginTop:25,marginBottom:13},menuGrid:{flexDirection:"row",gap:10},menuCard:{flex:1,backgroundColor:"#FFF",borderRadius:17,padding:13,borderWidth:1,borderColor:"#EFEFF1",minHeight:116},menuIcon:{width:42,height:42,borderRadius:13,backgroundColor:"#FFF0F1",alignItems:"center",justifyContent:"center"},menuTitle:{fontSize:12,fontWeight:"900",color:"#25252B",marginTop:10},menuSub:{fontSize:9,color:"#8A8A93",marginTop:3},
+ promo:{marginTop:20,backgroundColor:"#24242A",borderRadius:20,padding:18,flexDirection:"row",alignItems:"center",overflow:"hidden"},promoText:{flex:1},promoEyebrow:{fontSize:9,fontWeight:"900",color:"#FF8D96",letterSpacing:1.4},promoTitle:{fontSize:17,fontWeight:"900",fontStyle:"italic",color:"#FFF",marginTop:8},promoSub:{fontSize:10,color:"#D2D2D7",lineHeight:15,marginTop:5},motorArt:{width:85,height:75,borderRadius:18,backgroundColor:"#E60012",alignItems:"center",justifyContent:"center",marginLeft:8},
+ stats:{flexDirection:"row",flexWrap:"wrap",gap:10},stat:{width:"48%",flexGrow:1,backgroundColor:"#FFF",borderRadius:16,padding:14,borderWidth:1,borderColor:"#EFEFF1"},statTop:{flexDirection:"row",justifyContent:"space-between",alignItems:"center"},statIcon:{width:34,height:34,borderRadius:11,backgroundColor:"#FFF0F1",alignItems:"center",justifyContent:"center"},statNote:{fontSize:9,color:"#9A9AA2"},statValue:{fontSize:25,fontWeight:"900",color:"#25252B",marginTop:9},statLabel:{fontSize:11,color:"#777780",fontWeight:"700",marginTop:2},
+ loading:{padding:25,alignItems:"center",gap:9},muted:{fontSize:10,color:"#96969E",marginTop:6},error:{fontSize:11,color:"#B74747",marginTop:12,lineHeight:18},targetCard:{backgroundColor:"#FFF",borderRadius:18,padding:17,borderWidth:1,borderColor:"#EFEFF1"},targetHeading:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:15},targetTitle:{fontSize:14,fontWeight:"900",color:"#25252B"},targetLabel:{fontSize:11,fontWeight:"700",color:"#6F6F78",marginTop:7},track:{height:8,backgroundColor:"#F0F0F2",borderRadius:9,overflow:"hidden",marginTop:8,marginBottom:8},fill:{height:8,backgroundColor:"#E60012",borderRadius:9}
 });
