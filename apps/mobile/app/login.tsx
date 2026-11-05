@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,7 +33,7 @@ export default function LoginScreen() {
   return <KeyboardAvoidingView style={s.page} behavior={Platform.OS === "ios" ? "padding" : undefined}>
     <View style={s.redHeader}>
       <View style={s.brandRow}>
-        <View style={s.logo}><Text style={s.logoText}>AS</Text><View style={s.logoSwoosh}/></View>
+        <View style={s.logo}><Image source={require("../assets/dana-honda-icon.png")} style={s.logoImage} resizeMode="contain" /></View>
         <View><Text style={s.brandName}>ASISTEN SALES</Text><Text style={s.brandSub}>SALES MANAGEMENT APP</Text></View>
       </View>
       <Text style={s.headerTitle}>Kelola penjualan{ "\n" }lebih mudah.</Text>
@@ -61,8 +61,8 @@ const s=StyleSheet.create({
  redHeader:{height:290,backgroundColor:"#E60012",paddingTop:58,paddingHorizontal:25,overflow:"hidden"},
  brandRow:{flexDirection:"row",alignItems:"center",gap:12},
  logo:{width:54,height:54,borderRadius:17,backgroundColor:"#FFF",alignItems:"center",justifyContent:"center",overflow:"hidden"},
- logoText:{fontSize:21,fontWeight:"900",fontStyle:"italic",color:"#E60012"},
- logoSwoosh:{position:"absolute",width:42,height:7,backgroundColor:"#E60012",borderRadius:9,transform:[{rotate:"-22deg"}],bottom:10,right:2},
+ logoImage:{width:46,height:46},
+ 
  brandName:{fontSize:15,fontWeight:"900",fontStyle:"italic",letterSpacing:1,color:"#FFF"},
  brandSub:{fontSize:9,fontWeight:"700",letterSpacing:1.5,color:"#FFE4E6",marginTop:4},
  headerTitle:{fontSize:29,fontWeight:"900",fontStyle:"italic",color:"#FFF",marginTop:30,lineHeight:34},
