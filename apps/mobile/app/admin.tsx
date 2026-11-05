@@ -7,11 +7,11 @@ import * as XLSX from "xlsx-js-style";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 
-type TeamMember = { id: string; full_name: string; email: string | null; role: "admin" | "supervisor" | "sales"; is_active: boolean };
+type TeamMember = { id: string; full_name: string; email: string | null; phone: string | null; role: "admin" | "supervisor" | "sales"; is_active: boolean };
 type TeamStat = { prospects: number; spk: number; closing: number };
-type DraftUser = { full_name: string; email: string; password: string; role: "sales" | "supervisor" | "admin" };
+type DraftUser = { full_name: string; email: string; phone: string; password: string; role: "sales" | "supervisor" | "admin" };
 const zero: TeamStat = { prospects: 0, spk: 0, closing: 0 };
-const blankUser: DraftUser = { full_name: "", email: "", password: "", role: "sales" };
+const blankUser: DraftUser = { full_name: "", email: "", phone: "", password: "", role: "sales" };
 
 function dateKey(date: Date) {
   const y = date.getFullYear();
@@ -40,7 +40,7 @@ export default function AdminDashboard() {
     const end = dateKey(new Date(now.getFullYear(), now.getMonth() + 1, 1));
     try {
       const [users, prospects, spks] = await Promise.all([
-        supabase.from("profiles").select("id,full_name,email,role,is_active").order("full_name"),
+        supabase.from("profiles").select("id,full_name,email,phone,role,is_active").order("full_name"),
         supabase.from("prospects").select("user_id").gte("prospect_date", start).lt("prospect_date", end),
         supabase.from("spk_records").select("user_id,status").gte("spk_date", start).lt("spk_date", end),
       ]);
@@ -147,13 +147,13 @@ export default function AdminDashboard() {
   function openUserModal() { setDraftUser(blankUser); setUserModal(true); }
 
   async function createUser() {
-    if (!draftUser.full_name.trim() || !draftUser.email.trim() || !draftUser.password) {
-      Alert.alert("Data belum lengkap", "Nama, email, dan password wajib diisi."); return;
+    if (!draftUser.full_name.trim() || !draftUser.email.trim() || !draftUser.phone.trim() || !draftUser.password) {
+      Alert.alert("Data belum lengkap", "Nama, email, nomor HP, dan password wajib diisi."); return;
     }
     setSavingUser(true);
     try {
       const { error } = await supabase.functions.invoke("admin-create-user", {
-        body: { full_name: draftUser.full_name.trim(), email: draftUser.email.trim(), password: draftUser.password, role: draftUser.role },
+        body: { full_name: draftUser.full_name.trim(), email: draftUser.email.trim(), phone: draftUser.phone.trim(), password: draftUser.password, role: draftUser.role },
       });
       if (error) throw error;
       setUserModal(false); Alert.alert("Berhasil", "Pengguna berhasil dibuat dan langsung aktif."); await load();
@@ -204,7 +204,7 @@ export default function AdminDashboard() {
       {members.map(member => {
         const item = stats[member.id] ?? zero;
         return <View key={member.id} style={s.memberCard}><View style={s.memberTop}><View style={{ flex: 1 }}>
-          <Text style={s.memberName}>{member.full_name || "Tanpa nama"}</Text><Text style={s.memberEmail}>{member.email || "-"}</Text>
+          <Text style={s.memberName}>{member.full_name || "Tanpa nama"}</Text><Text style={s.memberEmail}>{member.email || "-"}</Text><Text style={s.memberEmail}>{member.phone || "-"}</Text>
           <Text style={s.memberRole}>{member.role === "admin" ? "Admin" : member.role === "supervisor" ? "Supervisor" : "Sales"}</Text>
         </View><View style={s.memberActions}><View style={[s.active, !member.is_active && s.inactive]}><Text style={s.memberStatusText}>{member.is_active ? "Aktif" : "Nonaktif"}</Text></View><Pressable onPress={() => manageMember(member)} style={s.manageButton} accessibilityRole="button" accessibilityLabel={`Kelola ${member.full_name}`}><Text style={s.manageText}>Kelola</Text></Pressable></View></View>
         <View style={s.memberStats}><Text style={s.memberStat}>Prospek <Text style={s.statNumber}>{item.prospects}</Text></Text><Text style={s.memberStat}>SPK <Text style={s.statNumber}>{item.spk}</Text></Text><Text style={s.memberStat}>Jual <Text style={s.statNumber}>{item.closing}</Text></Text></View></View>;
@@ -217,6 +217,7 @@ export default function AdminDashboard() {
         <Text style={s.sheetTitle}>Tambah pengguna</Text>
         <Text style={s.label}>Nama lengkap</Text><TextInput value={draftUser.full_name} onChangeText={(v) => setDraftUser(p => ({ ...p, full_name: v }))} placeholder="Nama sales" placeholderTextColor="#A1A1B0" style={s.input} />
         <Text style={s.label}>Email login</Text><TextInput value={draftUser.email} onChangeText={(v) => setDraftUser(p => ({ ...p, email: v }))} autoCapitalize="none" keyboardType="email-address" placeholder="nama@email.com" placeholderTextColor="#A1A1B0" style={s.input} />
+        <Text style={s.label}>Nomor HP</Text><TextInput value={draftUser.phone} onChangeText={(v) => setDraftUser(p => ({ ...p, phone: v }))} keyboardType="phone-pad" placeholder="08xxxxxxxxxx" placeholderTextColor="#A1A1B0" style={s.input} />
         <Text style={s.label}>Password awal</Text><TextInput value={draftUser.password} onChangeText={(v) => setDraftUser(p => ({ ...p, password: v }))} secureTextEntry placeholder="Minimal 8 karakter" placeholderTextColor="#A1A1B0" style={s.input} />
         <Text style={s.label}>Role</Text><View style={s.choices}>{(profile.role === "admin" ? (["sales","supervisor"] as const) : (["sales"] as const)).map(role => <Pressable key={role} onPress={() => setDraftUser(p => ({ ...p, role }))} style={[s.choice, draftUser.role === role && s.choiceActive]}><Text style={[s.choiceText, draftUser.role === role && s.choiceTextActive]}>{role === "sales" ? "Sales" : "Supervisor"}</Text></Pressable>)}</View>
         <Pressable disabled={savingUser} onPress={createUser} style={[s.save, savingUser && { opacity: .6 }]}>{savingUser ? <ActivityIndicator color="#FFF" /> : <Text style={s.saveText}>Buat akun</Text>}</Pressable>
