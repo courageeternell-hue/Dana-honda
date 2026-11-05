@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Alert, ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { decode } from "base64-arraybuffer";
@@ -100,8 +100,34 @@ export default function ProfileScreen() {
           [row.leasing, row.notes].filter(Boolean).join(" / "), row.status || "",
         ]),
       ];
-      XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(prospectRows), "Buku Prospek");
-      XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(spkRows), "Buku SPK");
+      const prospectSheet = XLSX.utils.aoa_to_sheet(prospectRows);
+      const spkSheet = XLSX.utils.aoa_to_sheet(spkRows);
+      const styleTable = (sheet: XLSX.WorkSheet, rowCount: number, colCount: number, widths: number[]) => {
+        sheet["!cols"] = widths.map(wch => ({ wch }));
+        sheet["!rows"] = Array.from({ length: rowCount }, (_, r) => ({ hpt: r === 0 ? 30 : 25 }));
+        for (let r = 0; r < rowCount; r++) {
+          for (let col = 0; col < colCount; col++) {
+            const cell = sheet[XLSX.utils.encode_cell({ r, c: col })] as any;
+            if (!cell) continue;
+            cell.s = {
+              font: { name: "Times New Roman", sz: 11, bold: r === 0 },
+              alignment: { horizontal: "center", vertical: "center", wrapText: true },
+              border: {
+                top: { style: "thin", color: { rgb: "D9D9D9" } },
+                bottom: { style: "thin", color: { rgb: "D9D9D9" } },
+                left: { style: "thin", color: { rgb: "D9D9D9" } },
+                right: { style: "thin", color: { rgb: "D9D9D9" } },
+              },
+              ...(r === 0 ? { fill: { patternType: "solid", fgColor: { rgb: "FCE8E8" } } } : {}),
+            };
+          }
+        }
+        sheet["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rowCount - 1, c: colCount - 1 } }) };
+      };
+      styleTable(prospectSheet, prospectRows.length, 10, [6, 13, 24, 18, 18, 18, 12, 12, 10, 28]);
+      styleTable(spkSheet, spkRows.length, 9, [13, 20, 24, 30, 18, 18, 18, 28, 14]);
+      XLSX.utils.book_append_sheet(workbook, prospectSheet, "Buku Prospek");
+      XLSX.utils.book_append_sheet(workbook, spkSheet, "Buku SPK");
       const base64 = XLSX.write(workbook, { bookType: "xlsx", type: "base64" });
       const safeName = (profile.full_name || "sales").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
       const uri = `${FileSystem.cacheDirectory}laporan-${safeName || "sales"}-${Date.now()}.xlsx`;
