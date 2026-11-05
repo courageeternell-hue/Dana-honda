@@ -1,1 +1,16 @@
-{"name":"Honda Sales Report","short_name":"Honda Report","start_url":"/","display":"standalone","background_color":"#f5f6f8","theme_color":"#D71920","icons":[]}
+{
+  "name": "Asisten Sales Honda",
+  "short_name": "Asisten Sales",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#D71920",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
