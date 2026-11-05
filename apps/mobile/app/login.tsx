@@ -33,7 +33,7 @@ export default function LoginScreen() {
   return <KeyboardAvoidingView style={s.page} behavior={Platform.OS === "ios" ? "padding" : undefined}>
     <View style={s.redHeader}>
       <View style={s.brandRow}>
-        <View style={s.logo}><Image source={require("../assets/dana-honda-icon.png")} style={s.logoImage} resizeMode="contain" /></View>
+        <View style={s.logo}><Image source={require("../assets/dana-honda-icon-square.png")} style={s.logoImage} resizeMode="contain" /></View>
         <View><Text style={s.brandName}>ASISTEN SALES</Text><Text style={s.brandSub}>SALES MANAGEMENT APP</Text></View>
       </View>
       <Text style={s.headerTitle}>Kelola penjualan{ "\n" }lebih mudah.</Text>
