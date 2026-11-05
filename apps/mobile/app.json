@@ -27,7 +27,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#FFFFFF",
-          "image": "./assets/dana-honda-icon.png",
+          "image": "./assets/dana-honda-icon-square.png",
           "imageWidth": 200
         }
       ]
