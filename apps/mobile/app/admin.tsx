@@ -139,6 +139,7 @@ export default function AdminDashboard() {
       {!!error && <Text style={s.error}>{error}</Text>}
       <View style={s.actionRow}>
         {profile.role === "admin" && <Pressable style={s.primaryButton} onPress={openUserModal}><Text style={s.primaryText}>+ Pengguna</Text></Pressable>}
+        <Pressable style={s.exportButton} onPress={() => router.push("/target")}><Text style={s.exportText}>Atur Target</Text></Pressable>
         <Pressable style={s.exportButton} onPress={exportExcel}><Text style={s.exportText}>↓ Excel</Text></Pressable>
       </View>
       <Text style={s.section}>Pengguna & performa</Text>
