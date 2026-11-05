@@ -131,15 +131,23 @@ using (public.is_supervisor()) with check (public.is_supervisor());
 -- update public.profiles set role='supervisor' where id='UUID-AKUN-ADMIN';
 
 
--- Admin can read and manage team profiles without exposing privileged Auth APIs.
+-- Admin and Supervisor profile management uses non-exposed helpers.
 create schema if not exists private;
 revoke all on schema private from public;
 grant usage on schema private to authenticated;
 create or replace function private.is_admin()
 returns boolean language sql stable security definer set search_path=public
-as $ select exists(select 1 from public.profiles where id=auth.uid() and role='admin' and is_active=true); $;
+as $$ select exists(select 1 from public.profiles where id=auth.uid() and role='admin' and is_active=true); $$;
 revoke all on function private.is_admin() from public, anon;
 grant execute on function private.is_admin() to authenticated;
+create or replace function private.is_manager()
+returns boolean language sql stable security definer set search_path=public
+as $$ select exists(select 1 from public.profiles where id=auth.uid() and role in ('admin','supervisor') and is_active=true); $$;
+revoke all on function private.is_manager() from public, anon;
+grant execute on function private.is_manager() to authenticated;
 drop policy if exists "admin manages profiles" on public.profiles;
 create policy "admin manages profiles" on public.profiles for all to authenticated
 using (private.is_admin()) with check (private.is_admin());
+drop policy if exists "active managers update profiles" on public.profiles;
+create policy "active managers update profiles" on public.profiles for update to authenticated
+using (private.is_manager()) with check (private.is_manager());
