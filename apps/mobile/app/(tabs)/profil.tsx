@@ -158,7 +158,7 @@ export default function ProfileScreen() {
     </View>
     <Text style={s.section}>Menu akun</Text>
     <View style={s.menu}>
-      {canManage && <Pressable style={s.menuItem} onPress={() => router.push("/admin")}><Text style={s.menuText}>Dasbor Admin / Supervisor</Text><Text style={s.chevron}>›</Text></Pressable>}
+      {canManage && <Pressable style={s.menuItem} onPress={() => router.push("/admin")}><Text style={s.menuText}>Kelola Pengguna & Tim</Text><Text style={s.chevron}>›</Text></Pressable>}
       <Pressable style={s.menuItem} onPress={exportMyExcel} disabled={exportingExcel}><Text style={s.menuText}>{exportingExcel ? "Menyiapkan Excel..." : "Download Excel Laporan Saya"}</Text><Text style={s.chevron}>{exportingExcel ? "…" : "↓"}</Text></Pressable>
       <Pressable style={s.menuItem} onPress={() => Alert.alert("Informasi akun", `Nama: ${profile?.full_name || "-"}\nEmail: ${profile?.email || "-"}\nRole: ${roleLabel[profile?.role ?? "sales"]}`, [{ text: "Tutup" }])}><Text style={s.menuText}>Informasi akun</Text><Text style={s.chevron}>›</Text></Pressable>
     </View>
