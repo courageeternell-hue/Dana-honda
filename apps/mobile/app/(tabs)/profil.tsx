@@ -168,9 +168,9 @@ export default function ProfileScreen() {
 }
 
 const s=StyleSheet.create({
- page:{flex:1,backgroundColor:"#F7F7FB",padding:22,paddingTop:30},
+ page:{flex:1,backgroundColor:"#F7F7F7",padding:22,paddingTop:30},
  title:{fontSize:28,fontWeight:"800",color:"#202033"},
- profile:{marginTop:22,backgroundColor:"#FFF",padding:18,borderRadius:18,flexDirection:"row",alignItems:"center",gap:14,borderWidth:1,borderColor:"#EEEEF5"},
+ profile:{marginTop:22,backgroundColor:"#FFF",padding:18,borderRadius:18,flexDirection:"row",alignItems:"center",gap:14,borderWidth:1,borderColor:"#EEEEEE"},
  avatarWrap:{width:62,height:62,position:"relative"},
  avatar:{width:62,height:62,borderRadius:20,backgroundColor:"#FCE8E8",alignItems:"center",justifyContent:"center"},
  avatarImage:{width:62,height:62,borderRadius:20,backgroundColor:"#FCE8E8"},
@@ -183,8 +183,8 @@ const s=StyleSheet.create({
  photoButton:{alignSelf:"flex-start",backgroundColor:"#D71920",paddingHorizontal:12,paddingVertical:8,borderRadius:9,marginTop:10,minWidth:112,alignItems:"center"},
  photoButtonText:{fontSize:11,fontWeight:"800",color:"#FFF"},
  section:{fontSize:16,fontWeight:"800",color:"#242438",marginTop:26,marginBottom:12},
- menu:{backgroundColor:"#FFF",borderRadius:18,paddingHorizontal:18,borderWidth:1,borderColor:"#EEEEF5"},
- menuItem:{minHeight:52,flexDirection:"row",alignItems:"center",justifyContent:"space-between",borderBottomWidth:1,borderBottomColor:"#F0F0F5"},
+ menu:{backgroundColor:"#FFF",borderRadius:18,paddingHorizontal:18,borderWidth:1,borderColor:"#EEEEEE"},
+ menuItem:{minHeight:52,flexDirection:"row",alignItems:"center",justifyContent:"space-between",borderBottomWidth:1,borderBottomColor:"#F0F0F0"},
  menuText:{fontSize:14,color:"#333348",fontWeight:"600"},chevron:{fontSize:24,color:"#A0A0AE"},
  logout:{marginTop:24,backgroundColor:"#FFF",borderColor:"#F0DCDC",borderWidth:1,borderRadius:14,padding:16,alignItems:"center"},
  logoutText:{fontSize:14,fontWeight:"800",color:"#C44545"},
