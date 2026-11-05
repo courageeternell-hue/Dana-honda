@@ -149,3 +149,42 @@ create policy "active managers read profiles" on public.profiles for select to a
 using (private.is_manager());
 create policy "active managers update profile phone" on public.profiles for update to authenticated
 using (private.is_manager()) with check (private.is_manager());
+
+
+-- Automatically audit every prospect and SPK insert/update/delete.
+create or replace function public.log_sales_data_changes()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  v_actor uuid := auth.uid();
+  v_old jsonb;
+  v_new jsonb;
+  v_record_id uuid;
+  v_action text;
+begin
+  if tg_op = 'INSERT' then
+    v_new := to_jsonb(new); v_record_id := new.id; v_action := 'insert';
+  elsif tg_op = 'UPDATE' then
+    v_old := to_jsonb(old); v_new := to_jsonb(new); v_record_id := new.id; v_action := 'update';
+  else
+    v_old := to_jsonb(old); v_record_id := old.id; v_action := 'delete';
+  end if;
+  if v_actor is not null then
+    insert into public.activity_logs(table_name, record_id, actor_id, action, old_data, new_data)
+    values (tg_table_name, v_record_id, v_actor, v_action, v_old, v_new);
+  end if;
+  if tg_op = 'DELETE' then return old; end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists prospects_audit_changes on public.prospects;
+create trigger prospects_audit_changes after insert or update or delete on public.prospects
+for each row execute function public.log_sales_data_changes();
+
+drop trigger if exists spk_records_audit_changes on public.spk_records;
+create trigger spk_records_audit_changes after insert or update or delete on public.spk_records
+for each row execute function public.log_sales_data_changes();
