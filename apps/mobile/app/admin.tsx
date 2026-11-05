@@ -164,7 +164,18 @@ export default function AdminDashboard() {
       const { error: phoneError } = await supabase.from("profiles").update({ phone: draftUser.phone.trim() }).eq("id", data.id);
       if (phoneError) throw phoneError;
       setUserModal(false); Alert.alert("Berhasil", "Pengguna berhasil dibuat dan langsung aktif."); await load();
-    } catch (e) { Alert.alert("Gagal membuat pengguna", e instanceof Error ? e.message : "Coba lagi."); }
+    } catch (e) {
+      let message = e instanceof Error ? e.message : "Coba lagi.";
+      const context = (e as any)?.context;
+      if (context && typeof context.clone === "function") {
+        try {
+          const payload = await context.clone().json();
+          if (typeof payload?.error === "string") message = payload.error;
+          else if (typeof payload?.message === "string") message = payload.message;
+        } catch {}
+      }
+      Alert.alert("Gagal membuat pengguna", message);
+    }
     finally { setSavingUser(false); }
   }
 
