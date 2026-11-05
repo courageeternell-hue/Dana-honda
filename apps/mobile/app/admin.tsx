@@ -161,8 +161,6 @@ export default function AdminDashboard() {
       });
       if (error) throw error;
       if (!data?.id) throw new Error("Akun dibuat tetapi ID pengguna tidak diterima.");
-      const { error: phoneError } = await supabase.from("profiles").update({ phone: draftUser.phone.trim() }).eq("id", data.id);
-      if (phoneError) throw phoneError;
       setUserModal(false); Alert.alert("Berhasil", "Pengguna berhasil dibuat dan langsung aktif."); await load();
     } catch (e) {
       let message = e instanceof Error ? e.message : "Coba lagi.";
