@@ -135,7 +135,7 @@ export default function ProspekScreen() {
               })}
             </View>
             <View style={s.calendarFooter}>
-              <Pressable onPress={()=>{const now=new Date();setCalendarMonth(new Date(now.getFullYear(),now.getMonth(),1));chooseFollowUpDay(now.getDate());}}><Text style={s.calendarAction}>Hari ini</Text></Pressable>
+              <Pressable onPress={()=>{const now=new Date();const y=now.getFullYear(),m=String(now.getMonth()+1).padStart(2,"0"),d=String(now.getDate()).padStart(2,"0");setCalendarMonth(new Date(y,now.getMonth(),1));setDraft(current=>({...current,follow_up:`${y}-${m}-${d}`}));setCalendarOpen(false);}}><Text style={s.calendarAction}>Hari ini</Text></Pressable>
               <View style={{flexDirection:"row",gap:16}}>
                 {!!draft.follow_up&&<Pressable onPress={()=>{setDraft(current=>({...current,follow_up:""}));setCalendarOpen(false);}}><Text style={s.calendarClear}>Hapus tanggal</Text></Pressable>}
                 <Pressable onPress={()=>setCalendarOpen(false)}><Text style={s.calendarAction}>Tutup</Text></Pressable>
