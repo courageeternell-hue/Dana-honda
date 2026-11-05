@@ -31,6 +31,14 @@ export default function AdminDashboard() {
   const [userModal, setUserModal] = useState(false);
   const [draftUser, setDraftUser] = useState<DraftUser>(blankUser);
   const [savingUser, setSavingUser] = useState(false);
+  const [supervisorProspects, setSupervisorProspects] = useState<any[]>([]);
+  const [supervisorSpks, setSupervisorSpks] = useState<any[]>([]);
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [reportPeriod, setReportPeriod] = useState<"daily" | "weekly" | "monthly">("monthly");
+  const [salesFilter, setSalesFilter] = useState("all");
+  const [correctionTarget, setCorrectionTarget] = useState<{id:string; table:"prospects"|"spk_records"; label:string}|null>(null);
+  const [correctionNote, setCorrectionNote] = useState("");
+  const [savingCorrection, setSavingCorrection] = useState(false);
 
   const load = useCallback(async () => {
     if (!profile || (profile.role !== "admin" && profile.role !== "supervisor")) return;
@@ -144,6 +152,74 @@ export default function AdminDashboard() {
     } catch (e) { Alert.alert("Export gagal", e instanceof Error ? e.message : "Gagal membuat file Excel."); }
   }
 
+
+  const loadSupervisorData = useCallback(async () => {
+    if (profile?.role !== "supervisor" && profile?.role !== "admin") return;
+    try {
+      const [p, s, logs] = await Promise.all([
+        supabase.from("prospects").select("id,user_id,prospect_date,customer_name,phone,source,status,deal_status,follow_up,notes,updated_at,spk_created").order("prospect_date", { ascending: false }).limit(1000),
+        supabase.from("spk_records").select("id,user_id,spk_date,sales_name,customer_name,phone,address,source,unit_type,status,notes,updated_at").order("spk_date", { ascending: false }).limit(1000),
+        supabase.from("activity_logs").select("id,table_name,record_id,actor_id,action,old_data,new_data,created_at").order("created_at", { ascending: false }).limit(100),
+      ]);
+      if (p.error) throw p.error;
+      if (s.error) throw s.error;
+      if (logs.error) throw logs.error;
+      setSupervisorProspects(p.data ?? []);
+      setSupervisorSpks(s.data ?? []);
+      setActivityLogs(logs.data ?? []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Gagal memuat pengawasan data.");
+    }
+  }, [profile]);
+  useEffect(() => { void loadSupervisorData(); }, [loadSupervisorData]);
+
+  const memberName = (id: string) => members.find(m => m.id === id)?.full_name || "Sales tidak diketahui";
+  const todayKey = dateKey(new Date());
+  const overdueFollowUps = supervisorProspects.filter(p => p.follow_up && p.follow_up < todayKey && !p.spk_created && !["Deal","Batal","Tidak Tertarik"].includes(p.deal_status || ""));
+  const pendingProspects = supervisorProspects.filter(p => !p.spk_created && !["Deal","Batal","Tidak Tertarik"].includes(p.deal_status || "") && (p.status || "").toLowerCase() !== "deal");
+  const periodStart = (() => {
+    const now = new Date();
+    if (reportPeriod === "daily") return dateKey(now);
+    if (reportPeriod === "weekly") { const d = new Date(now); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return dateKey(d); }
+    return dateKey(new Date(now.getFullYear(), now.getMonth(), 1));
+  })();
+  const filteredProspects = supervisorProspects.filter(p => p.prospect_date >= periodStart && (salesFilter === "all" || p.user_id === salesFilter));
+  const filteredSpks = supervisorSpks.filter(p => p.spk_date >= periodStart && (salesFilter === "all" || p.user_id === salesFilter));
+  async function exportSupervisorReport(kind: "prospects" | "spk") {
+    try {
+      const rows = kind === "prospects" ? [
+        ["No","Tanggal","Nama Sales","Nama Konsumen","No HP","Sumber","Status","Deal","Follow-up","Keterangan"],
+        ...filteredProspects.map((p,i)=>[i+1,p.prospect_date,memberName(p.user_id),p.customer_name,p.phone,p.source||"",p.status||"",p.deal_status||"",p.follow_up||"",p.notes||""])
+      ] : [
+        ["Tanggal","Nama Sales","Nama Konsumen","Alamat","Sumber SPK","Type Unit","Status","Keterangan"],
+        ...filteredSpks.map(p=>[p.spk_date,p.sales_name||memberName(p.user_id),p.customer_name,p.address||"",p.source||"",p.unit_type,p.status||"",p.notes||""])
+      ];
+      const sheet = XLSX.utils.aoa_to_sheet(rows);
+      sheet["!cols"] = (kind === "prospects" ? [6,13,22,24,18,16,16,16,14,28] : [13,22,24,30,18,18,14,28]).map(wch=>({wch}));
+      for(let r=0;r<rows.length;r++) for(let col=0;col<rows[0].length;col++){const cell=sheet[XLSX.utils.encode_cell({r,c:col})] as any;if(cell)cell.s={font:{name:"Times New Roman",sz:11,bold:r===0},alignment:{horizontal:"center",vertical:"center",wrapText:true}};}
+      const book=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(book,sheet,kind==="prospects"?"Buku Prospek Tim":"Buku SPK Tim");
+      const base64=XLSX.write(book,{bookType:"xlsx",type:"base64"}); const uri=`${FileSystem.cacheDirectory}laporan-${kind}-tim-${Date.now()}.xlsx`;
+      await FileSystem.writeAsStringAsync(uri,base64,{encoding:FileSystem.EncodingType.Base64});
+      if(await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri,{mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",dialogTitle:"Laporan Tim"});
+      else Alert.alert("Excel siap",uri);
+    } catch(e){Alert.alert("Export gagal",e instanceof Error?e.message:"Gagal membuat laporan.");}
+  }
+  async function saveCorrection() {
+    if(!correctionTarget || !correctionNote.trim()) return;
+    setSavingCorrection(true);
+    try {
+      const table=correctionTarget.table;
+      const {data:oldRow,error:readError}=await supabase.from(table).select("*").eq("id",correctionTarget.id).single();
+      if(readError) throw readError;
+      const {error:updateError}=await supabase.from(table).update({notes:[oldRow.notes, "[Catatan Supervisor] "+correctionNote.trim()].filter(Boolean).join("\\n"),updated_at:new Date().toISOString()}).eq("id",correctionTarget.id);
+      if(updateError) throw updateError;
+      const {data:userData}=await supabase.auth.getUser();
+      if(userData.user) await supabase.from("activity_logs").insert({table_name:table,record_id:correctionTarget.id,actor_id:userData.user.id,action:"supervisor_note",old_data:oldRow,new_data:{...oldRow,supervisor_note:correctionNote.trim()}});
+      setCorrectionTarget(null);setCorrectionNote("");await loadSupervisorData();Alert.alert("Tersimpan","Catatan pengawasan berhasil ditambahkan.");
+    } catch(e){Alert.alert("Gagal menyimpan",e instanceof Error?e.message:"Coba lagi.");}
+    finally{setSavingCorrection(false);}
+  }
+
   function openUserModal() { setDraftUser(blankUser); setUserModal(true); }
 
   async function createUser() {
@@ -216,6 +292,27 @@ export default function AdminDashboard() {
         <Pressable style={s.exportButton} onPress={() => router.push("/target")}><Text style={s.exportText}>Atur Target</Text></Pressable>
         <Pressable style={s.exportButton} onPress={exportExcel}><Text style={s.exportText}>↓ Excel</Text></Pressable>
       </View>
+
+      {profile.role === "supervisor" && <>
+        <Text style={s.section}>Pengawasan Follow-up & Prospek</Text>
+        <View style={s.summaryGrid}>
+          <View style={s.memberCard}><Text style={s.statNumber}>{overdueFollowUps.length}</Text><Text style={s.memberStat}>Follow-up terlambat</Text></View>
+          <View style={s.memberCard}><Text style={s.statNumber}>{pendingProspects.length}</Text><Text style={s.memberStat}>Belum ditindaklanjuti / belum SPK</Text></View>
+        </View>
+        {overdueFollowUps.slice(0,12).map(p=><View key={p.id} style={s.memberCard}><Text style={s.memberName}>{p.customer_name}</Text><Text style={s.memberEmail}>{memberName(p.user_id)} • Jatuh tempo {p.follow_up}</Text><Text style={s.memberEmail}>{p.phone} • {p.status||"Belum Respon"}</Text><Pressable style={s.manageButton} onPress={()=>{setCorrectionTarget({id:p.id,table:"prospects",label:p.customer_name});setCorrectionNote("");}}><Text style={s.manageText}>Beri catatan</Text></Pressable></View>)}
+        <Text style={s.section}>Laporan Tim</Text>
+        <View style={s.choices}>{(["daily","weekly","monthly"] as const).map(v=><Pressable key={v} onPress={()=>setReportPeriod(v)} style={[s.choice,reportPeriod===v&&s.choiceActive]}><Text style={[s.choiceText,reportPeriod===v&&s.choiceTextActive]}>{v==="daily"?"Harian":v==="weekly"?"Mingguan":"Bulanan"}</Text></Pressable>)}</View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop:10}}><View style={s.choices}><Pressable onPress={()=>setSalesFilter("all")} style={[s.choice,salesFilter==="all"&&s.choiceActive]}><Text style={s.choiceText}>Semua Sales</Text></Pressable>{members.filter(m=>m.role==="sales").map(m=><Pressable key={m.id} onPress={()=>setSalesFilter(m.id)} style={[s.choice,salesFilter===m.id&&s.choiceActive]}><Text style={s.choiceText}>{m.full_name}</Text></Pressable>)}</View></ScrollView>
+        <View style={s.memberCard}><Text style={s.memberStat}>Periode mulai {periodStart}</Text><Text style={s.memberName}>{filteredProspects.length} Prospek • {filteredSpks.length} SPK</Text><Text style={s.memberEmail}>Filter: {salesFilter==="all"?"Semua sales":memberName(salesFilter)}</Text><View style={s.actionRow}><Pressable style={s.exportButton} onPress={()=>void exportSupervisorReport("prospects")}><Text style={s.exportText}>Excel Prospek Tim</Text></Pressable><Pressable style={s.exportButton} onPress={()=>void exportSupervisorReport("spk")}><Text style={s.exportText}>Excel SPK Tim</Text></Pressable></View></View>
+        <Text style={s.section}>Pemantauan Status Calon Konsumen</Text>
+        {pendingProspects.slice(0,15).map(p=><View key={p.id} style={s.memberCard}><Text style={s.memberName}>{p.customer_name}</Text><Text style={s.memberEmail}>{memberName(p.user_id)} • {p.prospect_date}</Text><Text style={s.memberEmail}>Status: {p.status||"Belum Respon"} • Deal: {p.deal_status||"Belum"}</Text><Pressable onPress={()=>{setCorrectionTarget({id:p.id,table:"prospects",label:p.customer_name});setCorrectionNote("");}} style={s.manageButton}><Text style={s.manageText}>Catatan / koreksi</Text></Pressable></View>)}
+        <Text style={s.section}>Pengawasan Data SPK</Text>
+        {supervisorSpks.slice(0,10).map(p=><View key={p.id} style={s.memberCard}><Text style={s.memberName}>{p.customer_name} • {p.unit_type}</Text><Text style={s.memberEmail}>{p.sales_name||memberName(p.user_id)} • {p.spk_date} • {p.status}</Text><Pressable onPress={()=>{setCorrectionTarget({id:p.id,table:"spk_records",label:p.customer_name});setCorrectionNote("");}} style={s.manageButton}><Text style={s.manageText}>Catatan / koreksi</Text></Pressable></View>)}
+        <Text style={s.section}>Riwayat Perubahan Data</Text>
+        {activityLogs.slice(0,20).map(log=><View key={log.id} style={s.memberCard}><Text style={s.memberName}>{log.action} • {log.table_name}</Text><Text style={s.memberEmail}>Aktor: {memberName(log.actor_id)} • {new Date(log.created_at).toLocaleString("id-ID")}</Text></View>)}
+        <Modal visible={!!correctionTarget} transparent animationType="slide" onRequestClose={()=>setCorrectionTarget(null)}><View style={s.overlay}><View style={s.sheet}><Text style={s.sheetTitle}>Catatan pengawasan</Text><Text style={s.memberEmail}>{correctionTarget?.label}</Text><TextInput multiline value={correctionNote} onChangeText={setCorrectionNote} placeholder="Tulis catatan atau koreksi untuk sales..." style={[s.input,{height:110,textAlignVertical:"top",paddingTop:12}]} /><Pressable disabled={savingCorrection||!correctionNote.trim()} onPress={()=>void saveCorrection()} style={s.save}>{savingCorrection?<ActivityIndicator color="#FFF"/>:<Text style={s.saveText}>Simpan catatan</Text>}</Pressable><Pressable onPress={()=>setCorrectionTarget(null)} style={s.cancel}><Text style={s.cancelText}>Batal</Text></Pressable></View></View></Modal>
+      </>}
+
       <Text style={s.section}>Pengguna & performa</Text>
       {members.map(member => {
         const item = stats[member.id] ?? zero;
