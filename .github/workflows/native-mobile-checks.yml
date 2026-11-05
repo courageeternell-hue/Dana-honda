@@ -49,3 +49,5 @@ jobs:
         run: npm run typecheck
       - name: Expo dependency check
         run: npx expo-doctor
+      - name: Android JavaScript bundle export
+        run: npx expo export --platform android --output-dir /tmp/dana-honda-android-export
