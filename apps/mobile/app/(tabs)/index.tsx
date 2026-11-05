@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { AppIcon } from "@/components/AppIcon";
 import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -15,14 +16,14 @@ export default function HomeScreen(){
  useEffect(()=>{loadMetrics();},[loadMetrics]);const refresh=()=>{setRefreshing(true);loadMetrics();};
  const first=(profile?.full_name||"Sales").trim().split(/\s+/)[0];
  return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#E60012"/>}>
-  <View style={s.top}><View style={s.brandBlock}><View style={s.brandLine}><Image source={require("../../assets/dana-honda-icon.png")} style={s.brandLogo} resizeMode="contain"/><Text style={s.eyebrow}>ASISTEN SALES</Text></View><Text style={s.greeting}>Halo, {first}</Text><Text style={s.subtitle}>Semangat capai target hari ini!</Text></View><Pressable onPress={()=>router.push("/(tabs)/profil")} style={s.avatar}><Text style={s.avatarText}>{(profile?.full_name||"S").slice(0,1).toUpperCase()}</Text></Pressable></View>
+  <View style={s.top}><View style={s.brandBlock}><View style={s.brandLine}><Image source={require("../../assets/dana-honda-icon-square.png")} style={s.brandLogo} resizeMode="contain"/><Text style={s.eyebrow}>ASISTEN SALES</Text></View><Text style={s.greeting}>Halo, {first}</Text><Text style={s.subtitle}>Semangat capai target hari ini!</Text></View><Pressable onPress={()=>router.push("/(tabs)/profil")} style={s.avatar}><Text style={s.avatarText}>{(profile?.full_name||"S").slice(0,1).toUpperCase()}</Text></Pressable></View>
   {(profile?.role==="admin"||profile?.role==="supervisor")&&<Pressable onPress={()=>router.push("/admin")} style={s.manage}><Ionicons name="people-outline" color="#FFF" size={17}/><Text style={s.manageText}>Kelola Pengguna & Tim</Text><Ionicons name="chevron-forward" color="#FFF" size={17}/></Pressable>}
   <View style={s.hero}><View style={s.heroCopy}><Text style={s.heroEyebrow}>PERFORMA BULAN INI</Text><Text style={s.heroTitle}>Total Prospek</Text><Text style={s.heroNumber}>{loading?"—":metrics.prospects}</Text><Text style={s.heroFoot}>Pantau setiap peluang menjadi penjualan.</Text></View><View style={s.heroArt}><Ionicons name="trending-up" size={58} color="rgba(255,255,255,.22)"/><View style={s.heroBadge}><Text style={s.heroBadgeText}>SALES</Text></View></View></View>
   <Text style={s.section}>Menu Utama</Text>
   <View style={s.menuGrid}>
-   <Pressable style={s.menuCard} onPress={()=>router.push("/(tabs)/prospek")}><View style={s.menuIcon}><Ionicons name="people" size={23} color="#E60012"/></View><Text style={s.menuTitle}>Prospek</Text><Text style={s.menuSub}>Kelola pelanggan</Text></Pressable>
-   <Pressable style={s.menuCard} onPress={()=>router.push("/(tabs)/spk")}><View style={s.menuIcon}><Ionicons name="document-text" size={23} color="#E60012"/></View><Text style={s.menuTitle}>SPK</Text><Text style={s.menuSub}>Data pemesanan</Text></Pressable>
-   <Pressable style={s.menuCard} onPress={()=>profile?.role==="admin"||profile?.role==="supervisor"?router.push("/admin"):Alert.alert("Dashboard","Ringkasan aktivitas dan target kamu tersedia di halaman Beranda.")}><View style={s.menuIcon}><Ionicons name="bar-chart" size={23} color="#E60012"/></View><Text style={s.menuTitle}>Dashboard</Text><Text style={s.menuSub}>Ringkasan aktivitas</Text></Pressable>
+   <Pressable style={s.menuCard} onPress={()=>router.push("/(tabs)/prospek")}><AppIcon name="people" size={23}/><Text style={s.menuTitle}>Prospek</Text><Text style={s.menuSub}>Kelola pelanggan</Text></Pressable>
+   <Pressable style={s.menuCard} onPress={()=>router.push("/(tabs)/spk")}><AppIcon name="document-text" size={23}/><Text style={s.menuTitle}>SPK</Text><Text style={s.menuSub}>Data pemesanan</Text></Pressable>
+   <Pressable style={s.menuCard} onPress={()=>profile?.role==="admin"||profile?.role==="supervisor"?router.push("/admin"):Alert.alert("Dashboard","Ringkasan aktivitas dan target kamu tersedia di halaman Beranda.")}><AppIcon name="analytics" size={23}/><Text style={s.menuTitle}>Dashboard</Text><Text style={s.menuSub}>Ringkasan aktivitas</Text></Pressable>
   </View>
   <View style={s.promo}><View style={s.promoText}><Text style={s.promoEyebrow}>HONDA • ONE HEART.</Text><Text style={s.promoTitle}>Satu hati, satu tujuan.</Text><Text style={s.promoSub}>Berikan pelayanan terbaik untuk setiap konsumen.</Text></View><View style={s.motorArt}><Ionicons name="bicycle" size={57} color="#FFF"/><Ionicons name="flash" size={21} color="#FFD9DC"/></View></View>
   <Text style={s.section}>Ringkasan Aktivitas</Text>
