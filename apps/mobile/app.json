@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Asisten Sales",
-    "slug": "dana-honda-acsjjx4z-wfgh5e4l85n",
+    "slug": "dana-honda",
     "scheme": "hondasales",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -28,8 +28,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "b84da681-375d-48f0-a0c3-3b140eb5fcdc"
+        "projectId": "163d62d3-1079-4811-bb1e-a8010d13f9c6"
       }
-    }
+    },
+    "owner": "irhamdi"
   }
 }
