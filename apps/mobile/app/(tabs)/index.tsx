@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,7 +22,7 @@ export default function HomeScreen(){
   <View style={s.menuGrid}>
    <Pressable style={s.menuCard} onPress={()=>router.push("/(tabs)/prospek")}><View style={s.menuIcon}><Ionicons name="people" size={23} color="#E60012"/></View><Text style={s.menuTitle}>Prospek</Text><Text style={s.menuSub}>Kelola pelanggan</Text></Pressable>
    <Pressable style={s.menuCard} onPress={()=>router.push("/(tabs)/spk")}><View style={s.menuIcon}><Ionicons name="document-text" size={23} color="#E60012"/></View><Text style={s.menuTitle}>SPK</Text><Text style={s.menuSub}>Data pemesanan</Text></Pressable>
-   <Pressable style={s.menuCard} onPress={()=>router.push("/admin")}><View style={s.menuIcon}><Ionicons name="bar-chart" size={23} color="#E60012"/></View><Text style={s.menuTitle}>Dashboard</Text><Text style={s.menuSub}>Ringkasan tim</Text></Pressable>
+   <Pressable style={s.menuCard} onPress={()=>profile?.role==="admin"||profile?.role==="supervisor"?router.push("/admin"):Alert.alert("Dashboard","Ringkasan aktivitas dan target kamu tersedia di halaman Beranda.")}><View style={s.menuIcon}><Ionicons name="bar-chart" size={23} color="#E60012"/></View><Text style={s.menuTitle}>Dashboard</Text><Text style={s.menuSub}>Ringkasan aktivitas</Text></Pressable>
   </View>
   <View style={s.promo}><View style={s.promoText}><Text style={s.promoEyebrow}>HONDA • ONE HEART.</Text><Text style={s.promoTitle}>Satu hati, satu tujuan.</Text><Text style={s.promoSub}>Berikan pelayanan terbaik untuk setiap konsumen.</Text></View><View style={s.motorArt}><Ionicons name="bicycle" size={57} color="#FFF"/><Ionicons name="flash" size={21} color="#FFD9DC"/></View></View>
   <Text style={s.section}>Ringkasan Aktivitas</Text>
