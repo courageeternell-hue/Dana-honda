@@ -2,31 +2,47 @@
 
 Native Android-first application built with React Native, Expo Router and TypeScript. This is a separate native mobile codebase, not a WebView wrapper around the Next.js website.
 
+## Expo project
+
+- Expo account owner: `ichatasya`
+- EAS project ID: `fd9bfa1d-db87-406f-8e61-7b053dbc0c45`
+- Android application ID: `com.danz.hondasales`
+- Manual APK profile: `preview` in `eas.json`
+
+The EAS project ID is already present in `app.json`. Do not run `eas build:configure` again unless Expo specifically reports that the project is not linked.
+
 ## Supabase configuration
 
-The app connects to the existing `honda-sales-report` Supabase project (`hgvlzgpcxetyoroqrjwj`). Copy `.env.example` to `.env` and set the project's **publishable** key.
+The app connects to the existing `honda-sales-report` Supabase project (`hgvlzgpcxetyoroqrjwj`). The mobile app reads only these public client variables:
 
-Never place a Supabase service-role key or other server secret in this mobile app. Admin-only user provisioning must be implemented on a trusted server/Edge Function.
+- `EXPO_PUBLIC_SUPABASE_URL`
+- `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
 
-## Local development
+For an EAS cloud build, add both variables to the Expo project's **preview** environment. For local development, copy `.env.example` to `.env` and fill in the same values. Never place a Supabase service-role key or another server secret in this mobile app. Admin-only user provisioning must run on a trusted server/Edge Function.
 
-Use Node.js 22.13 or newer for Expo SDK 58.
+## Manual Android APK build
+
+Run these commands from the repository's `apps/mobile` directory:
 
 ```bash
-npm install
-npx expo install --fix
+npm ci
+npm run preflight
 npx expo-doctor
-npx expo start
+npm run typecheck
+eas whoami
+eas project:info
+eas build --platform android --profile preview
 ```
 
-## Android builds
+Before building, make sure `eas whoami` shows `ichatasya`, and `eas project:info` points to the project ID above. The final command starts the cloud APK build; run it manually only when the checks above pass.
 
-EAS profiles are defined in `eas.json`:
+If EAS CLI is not installed on the machine, install it with `npm install --global eas-cli`, then sign in using `eas login`.
 
-- Internal preview APK: `eas build --platform android --profile preview`
-- Production Android App Bundle: `eas build --platform android --profile production`
+## Build profiles
 
-Before the first cloud build, sign in to an Expo account and link this app to an EAS project with `eas build:configure`. Configure the two `EXPO_PUBLIC_SUPABASE_*` environment variables in the EAS project environment. Only the publishable key belongs in the client.
+- `preview`: internal Android APK for direct device installation.
+- `production`: Android App Bundle (AAB) for store release.
+- `development`: internal APK with a development client.
 
 ## Implemented in the current branch
 
@@ -43,8 +59,9 @@ Before the first cloud build, sign in to an Expo account and link this app to an
 
 - Complete Admin/Supervisor team dashboard and user-management workflows
 - Secure server-side account provisioning (never expose service-role credentials in the app)
-- Run dependency validation, TypeScript checks and a real Android cloud build
-- Test login, role access, CRUD, RLS behavior and navigation on physical Android devices
-- Add app icon/splash assets, privacy information and production release checks
+- Successful Expo Doctor and TypeScript checks
+- A successful EAS Android cloud build and physical-device testing
+- Test login, role access, CRUD, RLS behavior and navigation on Android devices
+- Privacy information and production release checks
 
 The source code is committed, but no APK/AAB has been built or device-tested yet.
