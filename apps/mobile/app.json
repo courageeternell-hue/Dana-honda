@@ -10,7 +10,8 @@
       "package": "com.danz.hondasales",
       "versionCode": 1,
       "adaptiveIcon": {
-        "backgroundColor": "#D71920"
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/dana-honda-icon.png"
       }
     },
     "plugins": [
@@ -31,6 +32,12 @@
         "projectId": "3a95d921-61c2-4c7b-8e69-549a24a66c9d"
       }
     },
-    "owner": "irhamdi"
+    "owner": "irhamdi",
+    "icon": "./assets/dana-honda-icon.png",
+    "splash": {
+      "image": "./assets/dana-honda-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    }
   }
 }
