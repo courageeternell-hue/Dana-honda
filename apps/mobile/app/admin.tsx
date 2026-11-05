@@ -150,12 +150,19 @@ export default function AdminDashboard() {
     if (!draftUser.full_name.trim() || !draftUser.email.trim() || !draftUser.phone.trim() || !draftUser.password) {
       Alert.alert("Data belum lengkap", "Nama, email, nomor HP, dan password wajib diisi."); return;
     }
+    const phoneDigits = draftUser.phone.replace(/\D/g, "");
+    if (phoneDigits.length < 10 || phoneDigits.length > 15) {
+      Alert.alert("Nomor HP tidak valid", "Masukkan nomor HP dengan 10–15 digit."); return;
+    }
     setSavingUser(true);
     try {
-      const { error } = await supabase.functions.invoke("admin-create-user", {
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
         body: { full_name: draftUser.full_name.trim(), email: draftUser.email.trim(), phone: draftUser.phone.trim(), password: draftUser.password, role: draftUser.role },
       });
       if (error) throw error;
+      if (!data?.id) throw new Error("Akun dibuat tetapi ID pengguna tidak diterima.");
+      const { error: phoneError } = await supabase.from("profiles").update({ phone: draftUser.phone.trim() }).eq("id", data.id);
+      if (phoneError) throw phoneError;
       setUserModal(false); Alert.alert("Berhasil", "Pengguna berhasil dibuat dan langsung aktif."); await load();
     } catch (e) { Alert.alert("Gagal membuat pengguna", e instanceof Error ? e.message : "Coba lagi."); }
     finally { setSavingUser(false); }
