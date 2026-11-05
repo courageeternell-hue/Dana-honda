@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, Modal, Pressable, RefreshControl, ScrollView,
 import { Redirect, router } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 
@@ -67,7 +67,19 @@ export default function AdminDashboard() {
   async function exportExcel() {
     if (!members.length) { Alert.alert("Belum ada data", "Tidak ada data pengguna untuk diekspor."); return; }
     try {
-      const rows = members.map((m) => ({
+      const [prospects, spks] = await Promise.all([
+        supabase.from("prospects")
+          .select("user_id,prospect_date,customer_name,phone,source,status,deal_status,lead_response,notes,spk_created")
+          .order("prospect_date", { ascending: false }),
+        supabase.from("spk_records")
+          .select("user_id,spk_date,sales_name,customer_name,address,source,unit_type,dp_cash,leasing,status,notes")
+          .order("spk_date", { ascending: false }),
+      ]);
+      if (prospects.error) throw prospects.error;
+      if (spks.error) throw spks.error;
+
+      const book = XLSX.utils.book_new();
+      const summaryRows = members.map((m) => ({
         Nama: m.full_name || "-", Email: m.email || "-",
         Role: m.role === "admin" ? "Admin" : m.role === "supervisor" ? "Supervisor" : "Sales",
         Status: m.is_active ? "Aktif" : "Nonaktif",
@@ -75,9 +87,55 @@ export default function AdminDashboard() {
         SPK_Bulan_Ini: stats[m.id]?.spk ?? 0,
         Closing_Bulan_Ini: stats[m.id]?.closing ?? 0,
       }));
-      const sheet = XLSX.utils.json_to_sheet(rows);
-      const book = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(book, sheet, "Rekap Sales");
+      const summarySheet = XLSX.utils.json_to_sheet(summaryRows);
+      const prospectRows = [
+        ["No", "Tanggal", "Nama Konsumen", "No Hp konsumen", "Prospek Up", "Respon", "Tertarik", "Deal", "SPK", "Keterangan"],
+        ...(prospects.data ?? []).map((row, index) => [
+          index + 1, row.prospect_date || "", row.customer_name || "", row.phone || "",
+          row.source || "", row.lead_response || row.status || "",
+          row.status === "Tertarik" ? "Ya" : "Tidak", row.deal_status || "",
+          row.spk_created ? "Ya" : "Tidak", row.notes || "",
+        ]),
+      ];
+      const memberNames = new Map(members.map(member => [member.id, member.full_name]));
+      const spkRows = [
+        ["Tanggal", "Nama Sales", "Nama Konsumen", "Alamat Konsumen", "Sumber SPK", "Type Unit", "Harga", "Leasing/ Keterangan", "Status"],
+        ...(spks.data ?? []).map(row => [
+          row.spk_date || "", row.sales_name || memberNames.get(row.user_id) || "",
+          row.customer_name || "", row.address || "", row.source || "", row.unit_type || "",
+          row.dp_cash || "", [row.leasing, row.notes].filter(Boolean).join(" / "), row.status || "",
+        ]),
+      ];
+      const prospectSheet = XLSX.utils.aoa_to_sheet(prospectRows);
+      const spkSheet = XLSX.utils.aoa_to_sheet(spkRows);
+      const styleTable = (sheet: XLSX.WorkSheet, rowCount: number, colCount: number, widths: number[]) => {
+        sheet["!cols"] = widths.map(wch => ({ wch }));
+        sheet["!rows"] = Array.from({ length: rowCount }, (_, r) => ({ hpt: r === 0 ? 30 : 25 }));
+        for (let r = 0; r < rowCount; r++) {
+          for (let col = 0; col < colCount; col++) {
+            const cell = sheet[XLSX.utils.encode_cell({ r, c: col })] as any;
+            if (!cell) continue;
+            cell.s = {
+              font: { name: "Times New Roman", sz: 11, bold: r === 0 },
+              alignment: { horizontal: "center", vertical: "center", wrapText: true },
+              border: {
+                top: { style: "thin", color: { rgb: "D9D9D9" } },
+                bottom: { style: "thin", color: { rgb: "D9D9D9" } },
+                left: { style: "thin", color: { rgb: "D9D9D9" } },
+                right: { style: "thin", color: { rgb: "D9D9D9" } },
+              },
+              ...(r === 0 ? { fill: { patternType: "solid", fgColor: { rgb: "FCE8E8" } } } : {}),
+            };
+          }
+        }
+      };
+      styleTable(summarySheet, summaryRows.length, 7, [24, 30, 16, 14, 18, 16, 18]);
+      styleTable(prospectSheet, prospectRows.length, 10, [6, 13, 24, 18, 18, 18, 12, 12, 10, 28]);
+      styleTable(spkSheet, spkRows.length, 9, [13, 20, 24, 30, 18, 18, 18, 28, 14]);
+      XLSX.utils.book_append_sheet(book, summarySheet, "Rekap Sales");
+      XLSX.utils.book_append_sheet(book, prospectSheet, "Buku Prospek");
+      XLSX.utils.book_append_sheet(book, spkSheet, "Buku SPK");
+
       const base64 = XLSX.write(book, { bookType: "xlsx", type: "base64" });
       const uri = `${FileSystem.cacheDirectory}rekap-sales-${Date.now()}.xlsx`;
       await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
