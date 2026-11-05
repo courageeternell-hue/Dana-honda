@@ -20,7 +20,7 @@ export default function ProspekScreen() {
   const [statusFilter,setStatusFilter]=useState("Semua");
 
   const load=useCallback(async()=>{
-    const {data,error}=await supabase.from("prospects").select("id,user_id,customer_name,phone,unit_interest,source,status,deal_status,notes,created_at").order("created_at",{ascending:false});
+    const {data,error}=await supabase.from("prospects").select("id,user_id,customer_name,phone,unit_interest,source,status,deal_status,notes,follow_up,created_at").order("created_at",{ascending:false});
     if(error) setError(error.message); else {setItems((data??[]) as Prospect[]);setError("");}
     setLoading(false);
   },[]);
@@ -38,7 +38,7 @@ export default function ProspekScreen() {
     const payload={customer_name:draft.customer_name.trim(),phone:draft.phone.trim(),unit_interest:draft.unit_interest.trim()||null,source:draft.source.trim()||null,status:draft.status,notes:draft.notes.trim()||null,follow_up:draft.follow_up.trim()||null,updated_at:new Date().toISOString()};
     const result=editing
       ? await supabase.from("prospects").update(payload).eq("id",editing)
-      : await supabase.from("prospects").insert({...payload,user_id:profile.id,prospect_date:new Date().toISOString().slice(0,10),deal_status:"Belum",follow_up:null,lead_response:null,spk_created:false});
+      : await supabase.from("prospects").insert({...payload,user_id:profile.id,prospect_date:new Date().toISOString().slice(0,10),deal_status:"Belum",lead_response:null,spk_created:false});
     setSaving(false);
     if(result.error){Alert.alert("Gagal menyimpan",result.error.message);return;}
     setModal(false);await load();
