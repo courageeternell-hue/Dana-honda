@@ -138,7 +138,7 @@ export default function AdminDashboard() {
       </View></View>
       {!!error && <Text style={s.error}>{error}</Text>}
       <View style={s.actionRow}>
-        {profile.role === "admin" && <Pressable style={s.primaryButton} onPress={openUserModal}><Text style={s.primaryText}>+ Pengguna</Text></Pressable>}
+        <Pressable style={s.primaryButton} onPress={openUserModal} accessibilityRole="button" accessibilityLabel="Tambah pengguna"><Text style={s.primaryText}>+ Tambah Pengguna</Text></Pressable>
         <Pressable style={s.exportButton} onPress={() => router.push("/target")}><Text style={s.exportText}>Atur Target</Text></Pressable>
         <Pressable style={s.exportButton} onPress={exportExcel}><Text style={s.exportText}>↓ Excel</Text></Pressable>
       </View>
@@ -148,7 +148,7 @@ export default function AdminDashboard() {
         return <View key={member.id} style={s.memberCard}><View style={s.memberTop}><View style={{ flex: 1 }}>
           <Text style={s.memberName}>{member.full_name || "Tanpa nama"}</Text><Text style={s.memberEmail}>{member.email || "-"}</Text>
           <Text style={s.memberRole}>{member.role === "admin" ? "Admin" : member.role === "supervisor" ? "Supervisor" : "Sales"}</Text>
-        </View><Pressable onPress={() => manageMember(member)} style={[s.active, !member.is_active && s.inactive]}><Text>{member.is_active ? "Aktif" : "Nonaktif"}</Text></Pressable></View>
+        </View><View style={s.memberActions}><View style={[s.active, !member.is_active && s.inactive]}><Text style={s.memberStatusText}>{member.is_active ? "Aktif" : "Nonaktif"}</Text></View><Pressable onPress={() => manageMember(member)} style={s.manageButton} accessibilityRole="button" accessibilityLabel={`Kelola ${member.full_name}`}><Text style={s.manageText}>Kelola</Text></Pressable></View></View>
         <View style={s.memberStats}><Text style={s.memberStat}>Prospek <Text style={s.statNumber}>{item.prospects}</Text></Text><Text style={s.memberStat}>SPK <Text style={s.statNumber}>{item.spk}</Text></Text><Text style={s.memberStat}>Jual <Text style={s.statNumber}>{item.closing}</Text></Text></View></View>;
       })}
       {members.length === 0 && <Text style={s.muted}>Belum ada anggota tim.</Text>}
@@ -160,7 +160,7 @@ export default function AdminDashboard() {
         <Text style={s.label}>Nama lengkap</Text><TextInput value={draftUser.full_name} onChangeText={(v) => setDraftUser(p => ({ ...p, full_name: v }))} placeholder="Nama sales" placeholderTextColor="#A1A1B0" style={s.input} />
         <Text style={s.label}>Email login</Text><TextInput value={draftUser.email} onChangeText={(v) => setDraftUser(p => ({ ...p, email: v }))} autoCapitalize="none" keyboardType="email-address" placeholder="nama@email.com" placeholderTextColor="#A1A1B0" style={s.input} />
         <Text style={s.label}>Password awal</Text><TextInput value={draftUser.password} onChangeText={(v) => setDraftUser(p => ({ ...p, password: v }))} secureTextEntry placeholder="Minimal 8 karakter" placeholderTextColor="#A1A1B0" style={s.input} />
-        <Text style={s.label}>Role</Text><View style={s.choices}>{(["sales","supervisor","admin"] as const).map(role => <Pressable key={role} onPress={() => setDraftUser(p => ({ ...p, role }))} style={[s.choice, draftUser.role === role && s.choiceActive]}><Text style={[s.choiceText, draftUser.role === role && s.choiceTextActive]}>{role === "sales" ? "Sales" : role === "supervisor" ? "Supervisor" : "Admin"}</Text></Pressable>)}</View>
+        <Text style={s.label}>Role</Text><View style={s.choices}>{(profile.role === "admin" ? (["sales","supervisor"] as const) : (["sales"] as const)).map(role => <Pressable key={role} onPress={() => setDraftUser(p => ({ ...p, role }))} style={[s.choice, draftUser.role === role && s.choiceActive]}><Text style={[s.choiceText, draftUser.role === role && s.choiceTextActive]}>{role === "sales" ? "Sales" : "Supervisor"}</Text></Pressable>)}</View>
         <Pressable disabled={savingUser} onPress={createUser} style={[s.save, savingUser && { opacity: .6 }]}>{savingUser ? <ActivityIndicator color="#FFF" /> : <Text style={s.saveText}>Buat akun</Text>}</Pressable>
         <Pressable onPress={() => setUserModal(false)} style={s.cancel}><Text style={s.cancelText}>Batal</Text></Pressable>
       </ScrollView></View></View>
@@ -177,8 +177,8 @@ const s = StyleSheet.create({
   actionRow:{flexDirection:"row",gap:10,marginTop:20},primaryButton:{backgroundColor:"#D71920",paddingHorizontal:18,paddingVertical:12,borderRadius:12},primaryText:{fontSize:12,color:"#FFF",fontWeight:"800"},
   exportButton:{backgroundColor:"#FFF",borderWidth:1,borderColor:"#D71920",paddingHorizontal:18,paddingVertical:12,borderRadius:12},exportText:{fontSize:12,color:"#D71920",fontWeight:"800"},
   section:{fontSize:16,fontWeight:"800",color:"#242438",marginTop:25,marginBottom:12},memberCard:{backgroundColor:"#FFF",padding:16,borderRadius:16,borderWidth:1,borderColor:"#EEEEF5",marginBottom:10},
-  memberTop:{flexDirection:"row",alignItems:"center",gap:10},memberName:{fontSize:14,fontWeight:"800",color:"#29293D"},memberEmail:{fontSize:11,color:"#858597",marginTop:3},memberRole:{fontSize:10,color:"#D71920",fontWeight:"800",marginTop:5},
-  active:{backgroundColor:"#E6F7ED",paddingHorizontal:10,paddingVertical:7,borderRadius:9},inactive:{backgroundColor:"#FDECEC"},memberStats:{flexDirection:"row",gap:18,marginTop:14,borderTopWidth:1,borderTopColor:"#F0F0F5",paddingTop:12},
+  memberTop:{flexDirection:"row",alignItems:"center",gap:10},memberActions:{alignItems:"flex-end",gap:7},manageButton:{minHeight:38,minWidth:76,paddingHorizontal:12,alignItems:"center",justifyContent:"center",backgroundColor:"#FCE8E8",borderRadius:9,borderWidth:1,borderColor:"#D71920"},manageText:{fontSize:11,color:"#D71920",fontWeight:"900"},memberStatusText:{fontSize:10,color:"#D71920",fontWeight:"800"},memberName:{fontSize:14,fontWeight:"800",color:"#29293D"},memberEmail:{fontSize:11,color:"#858597",marginTop:3},memberRole:{fontSize:10,color:"#D71920",fontWeight:"800",marginTop:5},
+  active:{backgroundColor:"#FCE8E8",paddingHorizontal:10,paddingVertical:7,borderRadius:9},inactive:{backgroundColor:"#F5F5F5"},memberStats:{flexDirection:"row",gap:18,marginTop:14,borderTopWidth:1,borderTopColor:"#F0F0F5",paddingTop:12},
   memberStat:{fontSize:11,color:"#77778A"},statNumber:{fontWeight:"900",color:"#25253A"},notice:{backgroundColor:"#FFF",borderRadius:14,padding:15,marginTop:18,borderWidth:1,borderColor:"#EEEEF5"},noticeTitle:{fontSize:12,fontWeight:"800",color:"#29293D"},noticeText:{fontSize:11,color:"#858597",lineHeight:17,marginTop:5},
   overlay:{flex:1,backgroundColor:"rgba(20,20,35,.42)",justifyContent:"flex-end"},sheet:{maxHeight:"92%",backgroundColor:"#FFF",borderTopLeftRadius:24,borderTopRightRadius:24,padding:22,paddingBottom:30},sheetTitle:{fontSize:20,fontWeight:"800",color:"#242438",marginBottom:12},
   label:{fontSize:12,fontWeight:"700",color:"#45455A",marginTop:14,marginBottom:7},input:{height:47,borderWidth:1,borderColor:"#E8E8F0",borderRadius:12,paddingHorizontal:13,color:"#25253A",fontSize:13},
