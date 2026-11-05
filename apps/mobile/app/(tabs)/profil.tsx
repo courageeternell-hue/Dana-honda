@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { Alert, ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
+import * as XLSX from "xlsx";
 import { router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { decode } from "base64-arraybuffer";
@@ -11,6 +14,7 @@ const roleLabel = { admin: "Administrator", supervisor: "Supervisor", sales: "Sa
 export default function ProfileScreen() {
   const { profile, signOut, reloadProfile } = useAuth();
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [exportingExcel, setExportingExcel] = useState(false);
   const canManage = profile?.role === "admin" || profile?.role === "supervisor";
 
   async function chooseProfilePhoto() {
@@ -61,6 +65,72 @@ export default function ProfileScreen() {
     }
   }
 
+  async function exportMyExcel() {
+    if (!profile || exportingExcel) return;
+    setExportingExcel(true);
+    try {
+      const [prospects, spks] = await Promise.all([
+        supabase.from("prospects")
+          .select("prospect_date,customer_name,phone,source,unit_interest,status,deal_status,follow_up,lead_response,notes,spk_created,created_at")
+          .eq("user_id", profile.id)
+          .order("prospect_date", { ascending: false }),
+        supabase.from("spk_records")
+          .select("spk_date,sales_name,customer_name,phone,address,source,unit_type,dp_cash,leasing,status,notes,created_at")
+          .eq("user_id", profile.id)
+          .order("spk_date", { ascending: false }),
+      ]);
+      if (prospects.error) throw prospects.error;
+      if (spks.error) throw spks.error;
+
+      const workbook = XLSX.utils.book_new();
+      const prospectSheet = XLSX.utils.json_to_sheet((prospects.data ?? []).map(row => ({
+        Tanggal: row.prospect_date,
+        Nama_Pelanggan: row.customer_name,
+        Nomor_HP: row.phone,
+        Sumber: row.source,
+        Minat_Motor: row.unit_interest,
+        Status: row.status,
+        Status_Deal: row.deal_status,
+        Follow_Up: row.follow_up,
+        Respon_Lead: row.lead_response,
+        Catatan: row.notes,
+        SPK_Dibuat: row.spk_created ? "Ya" : "Tidak",
+      })));
+      const spkSheet = XLSX.utils.json_to_sheet((spks.data ?? []).map(row => ({
+        Tanggal: row.spk_date,
+        Nama_Sales: row.sales_name,
+        Nama_Pelanggan: row.customer_name,
+        Nomor_HP: row.phone,
+        Alamat: row.address,
+        Sumber: row.source,
+        Tipe_Motor: row.unit_type,
+        DP_Cash: row.dp_cash,
+        Leasing: row.leasing,
+        Status: row.status,
+        Catatan: row.notes,
+      })));
+      XLSX.utils.book_append_sheet(workbook, prospectSheet, "Prospek Saya");
+      XLSX.utils.book_append_sheet(workbook, spkSheet, "SPK Saya");
+      const base64 = XLSX.write(workbook, { bookType: "xlsx", type: "base64" });
+      const safeName = (profile.full_name || "sales").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const uri = `${FileSystem.cacheDirectory}laporan-${safeName || "sales"}-${Date.now()}.xlsx`;
+      await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, {
+          mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          dialogTitle: "Download Laporan Excel Saya",
+          UTI: "com.microsoft.excel.xlsx",
+        });
+      } else {
+        Alert.alert("Excel siap", "File laporan berhasil dibuat, tetapi fitur berbagi tidak tersedia di perangkat ini.");
+      }
+    } catch (error) {
+      Alert.alert("Gagal membuat Excel", error instanceof Error ? error.message : "Coba lagi beberapa saat.");
+    } finally {
+      setExportingExcel(false);
+    }
+  }
+
   async function confirmSignOut() {
     Alert.alert("Keluar akun", "Yakin ingin keluar dari aplikasi?", [
       { text: "Batal", style: "cancel" },
@@ -89,6 +159,7 @@ export default function ProfileScreen() {
     <Text style={s.section}>Menu akun</Text>
     <View style={s.menu}>
       {canManage && <Pressable style={s.menuItem} onPress={() => router.push("/admin")}><Text style={s.menuText}>Dasbor Admin / Supervisor</Text><Text style={s.chevron}>›</Text></Pressable>}
+      <Pressable style={s.menuItem} onPress={exportMyExcel} disabled={exportingExcel}><Text style={s.menuText}>{exportingExcel ? "Menyiapkan Excel..." : "Download Excel Laporan Saya"}</Text><Text style={s.chevron}>{exportingExcel ? "…" : "↓"}</Text></Pressable>
       <Pressable style={s.menuItem} onPress={() => Alert.alert("Informasi akun", `Nama: ${profile?.full_name || "-"}\nEmail: ${profile?.email || "-"}\nRole: ${roleLabel[profile?.role ?? "sales"]}`, [{ text: "Tutup" }])}><Text style={s.menuText}>Informasi akun</Text><Text style={s.chevron}>›</Text></Pressable>
     </View>
     <Pressable onPress={confirmSignOut} style={s.logout}><Text style={s.logoutText}>Keluar akun</Text></Pressable>
