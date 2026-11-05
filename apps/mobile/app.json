@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Asisten Sales",
-    "slug": "zerooo",
+    "slug": "dana-honda",
     "scheme": "hondasales",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -37,7 +37,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "3a95d921-61c2-4c7b-8e69-549a24a66c9d"
+        "projectId": "163d62d3-1079-4811-bb1e-a8010d13f9c6"
       }
     },
     "owner": "irhamdi",
