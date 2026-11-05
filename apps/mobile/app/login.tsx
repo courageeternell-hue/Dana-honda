@@ -17,7 +17,7 @@ export default function LoginScreen() {
     if (!email.trim() || !password) { Alert.alert("Data belum lengkap", "Masukkan email dan password."); return; }
     setBusy(true);
     try { await signIn(email, password); router.replace("/"); }
-    catch (error) { Alert.alert("Login gagal", error instanceof Error ? error.message : "Periksa email dan password kamu."); }
+    catch (error) { const message = error instanceof Error ? error.message : ""; Alert.alert("Login gagal", /invalid login credentials|user not found|akun belum tersedia/i.test(message) ? "Akun belum tersedia atau email/password salah. Hubungi Admin/Supervisor." : message || "Periksa email dan password kamu."); }
     finally { setBusy(false); }
   }
 
