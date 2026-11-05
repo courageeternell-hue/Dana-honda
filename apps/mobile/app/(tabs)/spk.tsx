@@ -32,7 +32,7 @@ export default function SpkScreen(){
   if(phoneDigits.length<10||phoneDigits.length>15){Alert.alert("Nomor HP tidak valid","Masukkan nomor HP dengan 10–15 digit.");return;}
   setSaving(true);
   const payload={customer_name:draft.customer_name.trim(),phone:draft.phone.trim(),unit_type:draft.unit_type.trim(),dp_cash:draft.dp_cash.trim()||null,leasing:draft.leasing.trim()||null,address:draft.address.trim()||null,source:draft.source.trim()||null,status:draft.status,updated_at:new Date().toISOString()};
-  const result=editing?await supabase.from("spk_records").update(payload).eq("id",editing):await supabase.from("spk_records").insert({...payload,user_id:profile.id,sales_name:profile.full_name,spk_date:new Date().toISOString().slice(0,10),prospect_id:null,address:null,source:null,notes:null});
+  const result=editing?await supabase.from("spk_records").update(payload).eq("id",editing):await supabase.from("spk_records").insert({...payload,user_id:profile.id,sales_name:profile.full_name,spk_date:new Date().toISOString().slice(0,10),prospect_id:null,notes:null});
   setSaving(false);if(result.error){Alert.alert("Gagal menyimpan",result.error.message);return;}setModal(false);await load();
  }
  function remove(item:Spk){Alert.alert("Hapus SPK?",`Data SPK ${item.customer_name} akan dihapus.`,[{text:"Batal",style:"cancel"},{text:"Hapus",style:"destructive",onPress:async()=>{const {error}=await supabase.from("spk_records").delete().eq("id",item.id);if(error)Alert.alert("Tidak bisa menghapus",error.message);else load();}}]);}
