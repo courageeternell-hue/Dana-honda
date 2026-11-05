@@ -11,7 +11,7 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/dana-honda-icon.png"
+        "foregroundImage": "./assets/dana-honda-icon-square.png"
       }
     },
     "plugins": [
@@ -21,6 +21,14 @@
         {
           "photosPermission": "Izinkan Asisten Sales mengakses galeri untuk mengganti foto profil.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FFFFFF",
+          "image": "./assets/dana-honda-icon.png",
+          "imageWidth": 200
         }
       ]
     ],
@@ -33,11 +41,6 @@
       }
     },
     "owner": "irhamdi",
-    "icon": "./assets/dana-honda-icon.png",
-    "splash": {
-      "image": "./assets/dana-honda-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
-    }
+    "icon": "./assets/dana-honda-icon-square.png"
   }
 }
