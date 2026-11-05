@@ -4,9 +4,10 @@
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null default '',
+  email text,
   phone text,
-  phone text,
-  role text not null default 'sales' check (role in ('sales','supervisor')),
+  role text not null default 'sales' check (role in ('sales','supervisor','admin')),
+  is_active boolean not null default true,
   created_at timestamptz not null default now()
 );
 
@@ -91,8 +92,7 @@ alter table public.sales_targets enable row level security;
 
 create policy "profiles self or supervisor read" on public.profiles for select
 using (id=auth.uid() or public.is_supervisor());
-create policy "supervisor manages profiles" on public.profiles for all
-using (public.is_supervisor()) with check (public.is_supervisor());
+drop policy if exists "supervisor manages profiles" on public.profiles;
 
 create policy "prospects own or supervisor read" on public.prospects for select
 using (user_id=auth.uid() or public.is_supervisor());
