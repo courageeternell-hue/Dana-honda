@@ -14,7 +14,10 @@ module.exports = async ({ config }) => {
   // Build a square launcher icon at Expo config time, including manual EAS builds.
   // Keep all artwork visible by fitting it onto a transparent square canvas.
   const artwork = await Jimp.read(source);
-  artwork.scaleToFit(920, 920);
+  const scale = Math.min(920 / artwork.bitmap.width, 920 / artwork.bitmap.height);
+  const width = Math.max(1, Math.round(artwork.bitmap.width * scale));
+  const height = Math.max(1, Math.round(artwork.bitmap.height * scale));
+  artwork.resize(width, height);
   const canvas = new Jimp(1024, 1024, 0x00000000);
   const x = Math.floor((1024 - artwork.bitmap.width) / 2);
   const y = Math.floor((1024 - artwork.bitmap.height) / 2);
