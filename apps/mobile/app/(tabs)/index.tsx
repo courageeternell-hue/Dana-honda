@@ -60,12 +60,12 @@ export default function HomeScreen() {
   const prospectProgress = metrics.prospectTarget > 0 ? Math.min(100, Math.round(metrics.prospects / metrics.prospectTarget * 100)) : 0;
   const spkProgress = metrics.spkTarget > 0 ? Math.min(100, Math.round(metrics.spk / metrics.spkTarget * 100)) : 0;
 
-  return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#5B4BDB" />}>
+  return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#D71920" />}>
     <Text style={s.eyebrow}>HONDA SALES</Text><Text style={s.title}>Beranda</Text>
     <Text style={s.subtitle}>Halo, {profile?.full_name || "Sales"}! Ini ringkasan penjualanmu.</Text>
     <View style={s.hero}><Text style={s.heroSmall}>RINGKASAN BULAN INI</Text><Text style={s.heroValue}>{profile?.role === "sales" ? "Aktivitas Saya" : "Aktivitas Tim"}</Text><Text style={s.heroText}>Tarik layar ke bawah untuk memperbarui data.</Text></View>
     <Text style={s.section}>Ringkasan</Text>
-    {loading ? <View style={s.loading}><ActivityIndicator color="#5B4BDB" /><Text style={s.loadingText}>Memuat data...</Text></View> : <>
+    {loading ? <View style={s.loading}><ActivityIndicator color="#D71920" /><Text style={s.loadingText}>Memuat data...</Text></View> : <>
       <View style={s.grid}>
         <Stat label="Prospek" value={String(metrics.prospects)} note="Bulan ini" />
         <Stat label="SPK" value={String(metrics.spk)} note="Bulan ini" />
@@ -90,13 +90,13 @@ export default function HomeScreen() {
 }
 
 const s = StyleSheet.create({
-  page:{flex:1,backgroundColor:"#F7F7FB"},content:{padding:22,paddingTop:28,paddingBottom:32},
-  eyebrow:{fontSize:11,fontWeight:"800",letterSpacing:1.5,color:"#5B4BDB"},title:{fontSize:29,fontWeight:"800",color:"#202033",marginTop:8},
-  subtitle:{fontSize:14,color:"#77778A",marginTop:5},hero:{backgroundColor:"#5B4BDB",borderRadius:22,padding:22,marginTop:24},
-  heroSmall:{color:"#DCD8FF",fontSize:10,fontWeight:"800",letterSpacing:1.2},heroValue:{color:"#FFFFFF",fontSize:24,fontWeight:"800",marginTop:12},
-  heroText:{color:"#E9E7FF",fontSize:13,lineHeight:20,marginTop:6},section:{fontSize:17,fontWeight:"800",color:"#242438",marginTop:26,marginBottom:13},
-  grid:{flexDirection:"row",flexWrap:"wrap",gap:12},stat:{width:"48%",flexGrow:1,backgroundColor:"#FFFFFF",borderRadius:17,padding:16,borderWidth:1,borderColor:"#EEEEF5"},
+  page:{flex:1,backgroundColor:"#F7F7F7"},content:{padding:22,paddingTop:28,paddingBottom:32},
+  eyebrow:{fontSize:11,fontWeight:"800",letterSpacing:1.5,color:"#D71920"},title:{fontSize:29,fontWeight:"800",color:"#202033",marginTop:8},
+  subtitle:{fontSize:14,color:"#77778A",marginTop:5},hero:{backgroundColor:"#D71920",borderRadius:22,padding:22,marginTop:24},
+  heroSmall:{color:"#FFE3E3",fontSize:10,fontWeight:"800",letterSpacing:1.2},heroValue:{color:"#FFFFFF",fontSize:24,fontWeight:"800",marginTop:12},
+  heroText:{color:"#FFE3E3",fontSize:13,lineHeight:20,marginTop:6},section:{fontSize:17,fontWeight:"800",color:"#242438",marginTop:26,marginBottom:13},
+  grid:{flexDirection:"row",flexWrap:"wrap",gap:12},stat:{width:"48%",flexGrow:1,backgroundColor:"#FFFFFF",borderRadius:17,padding:16,borderWidth:1,borderColor:"#EEEEEE"},
   statLabel:{fontSize:12,color:"#77778A",fontWeight:"600"},statValue:{fontSize:25,fontWeight:"800",color:"#26263B",marginTop:8},statNote:{fontSize:11,color:"#9A9AAA",marginTop:4},
   loading:{padding:28,alignItems:"center",gap:10},loadingText:{fontSize:12,color:"#858597"},error:{fontSize:12,color:"#B74747",marginTop:12,lineHeight:18},
-  targetCard:{backgroundColor:"#FFF",borderRadius:17,padding:18,borderWidth:1,borderColor:"#EEEEF5"},progressHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},targetLabel:{fontSize:12,color:"#77778A",fontWeight:"700"},progressPercent:{fontSize:12,color:"#D71920",fontWeight:"900"},targetValue:{fontSize:24,fontWeight:"800",color:"#26263B",marginTop:7},progressTrack:{height:9,backgroundColor:"#F0F0F5",borderRadius:9,overflow:"hidden",marginTop:10},progressFill:{height:9,backgroundColor:"#D71920",borderRadius:9},targetHint:{fontSize:11,color:"#9A9AAA",marginTop:4}
+  targetCard:{backgroundColor:"#FFF",borderRadius:17,padding:18,borderWidth:1,borderColor:"#EEEEEE"},progressHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},targetLabel:{fontSize:12,color:"#77778A",fontWeight:"700"},progressPercent:{fontSize:12,color:"#D71920",fontWeight:"900"},targetValue:{fontSize:24,fontWeight:"800",color:"#26263B",marginTop:7},progressTrack:{height:9,backgroundColor:"#F0F0F0",borderRadius:9,overflow:"hidden",marginTop:10},progressFill:{height:9,backgroundColor:"#D71920",borderRadius:9},targetHint:{fontSize:11,color:"#9A9AAA",marginTop:4}
 });
