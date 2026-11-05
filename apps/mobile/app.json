@@ -37,10 +37,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": "369cb3cb-3f36-4b61-ab82-813f340aab0c"
+        "projectId": "fd9bfa1d-db87-406f-8e61-7b053dbc0c45"
       }
     },
-    "owner": "courage",
+    "owner": "tasya",
     "icon": "./assets/dana-honda-icon-square.png"
   }
 }
