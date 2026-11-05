@@ -9,6 +9,7 @@ export type UserProfile = {
   full_name: string;
   email: string | null;
   avatar_url: string | null;
+  phone: string | null;
   role: UserRole;
   is_active: boolean;
 };
