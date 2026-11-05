@@ -65,14 +65,10 @@ export default function AdminDashboard() {
   useEffect(() => { void load(); }, [load]);
 
   async function exportExcel() {
-    if (!members.length) {
-      Alert.alert("Belum ada data", "Tidak ada data pengguna untuk diekspor.");
-      return;
-    }
+    if (!members.length) { Alert.alert("Belum ada data", "Tidak ada data pengguna untuk diekspor."); return; }
     try {
       const rows = members.map((m) => ({
-        Nama: m.full_name || "-",
-        Email: m.email || "-",
+        Nama: m.full_name || "-", Email: m.email || "-",
         Role: m.role === "admin" ? "Admin" : m.role === "supervisor" ? "Supervisor" : "Sales",
         Status: m.is_active ? "Aktif" : "Nonaktif",
         Prospek_Bulan_Ini: stats[m.id]?.prospects ?? 0,
@@ -85,25 +81,16 @@ export default function AdminDashboard() {
       const base64 = XLSX.write(book, { bookType: "xlsx", type: "base64" });
       const uri = `${FileSystem.cacheDirectory}rekap-sales-${Date.now()}.xlsx`;
       await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", dialogTitle: "Download Rekap Sales" });
-      } else {
-        Alert.alert("Excel siap", uri);
-      }
-    } catch (e) {
-      Alert.alert("Export gagal", e instanceof Error ? e.message : "Gagal membuat file Excel.");
-    }
+      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", dialogTitle: "Download Rekap Sales" });
+      else Alert.alert("Excel siap", uri);
+    } catch (e) { Alert.alert("Export gagal", e instanceof Error ? e.message : "Gagal membuat file Excel."); }
   }
 
-  function openUserModal() {
-    setDraftUser(blankUser);
-    setUserModal(true);
-  }
+  function openUserModal() { setDraftUser(blankUser); setUserModal(true); }
 
   async function createUser() {
     if (!draftUser.full_name.trim() || !draftUser.email.trim() || !draftUser.password) {
-      Alert.alert("Data belum lengkap", "Nama, email, dan password wajib diisi.");
-      return;
+      Alert.alert("Data belum lengkap", "Nama, email, dan password wajib diisi."); return;
     }
     setSavingUser(true);
     try {
@@ -111,32 +98,31 @@ export default function AdminDashboard() {
         body: { full_name: draftUser.full_name.trim(), email: draftUser.email.trim(), password: draftUser.password, role: draftUser.role },
       });
       if (error) throw error;
-      setUserModal(false);
-      Alert.alert("Berhasil", "Pengguna berhasil dibuat dan langsung aktif.");
-      await load();
-    } catch (e) {
-      Alert.alert("Gagal membuat pengguna", e instanceof Error ? e.message : "Coba lagi.");
-    } finally {
-      setSavingUser(false);
-    }
+      setUserModal(false); Alert.alert("Berhasil", "Pengguna berhasil dibuat dan langsung aktif."); await load();
+    } catch (e) { Alert.alert("Gagal membuat pengguna", e instanceof Error ? e.message : "Coba lagi."); }
+    finally { setSavingUser(false); }
   }
 
   async function updateMember(member: TeamMember, patch: Partial<Pick<TeamMember, "role" | "is_active">>) {
-    const { error } = await supabase.from("profiles").update(patch).eq("id", member.id);
-    if (error) {
-      Alert.alert("Gagal memperbarui pengguna", error.message);
-      return;
+    try {
+      const { error } = await supabase.functions.invoke("admin-manage-user", { body: { user_id: member.id, ...patch } });
+      if (error) throw error;
+      await load();
+      Alert.alert("Berhasil", "Data pengguna berhasil diperbarui.");
+    } catch (e) {
+      Alert.alert("Gagal memperbarui pengguna", e instanceof Error ? e.message : "Coba lagi.");
     }
-    await load();
   }
 
   function manageMember(member: TeamMember) {
-    const nextActive = !member.is_active;
-    Alert.alert(member.full_name || "Pengguna", "Pilih tindakan", [
-      { text: "Batal", style: "cancel" },
-      { text: nextActive ? "Aktifkan akun" : "Nonaktifkan akun", onPress: () => updateMember(member, { is_active: nextActive }) },
-      { text: member.role === "sales" ? "Jadikan Supervisor" : "Jadikan Sales", onPress: () => updateMember(member, { role: member.role === "sales" ? "supervisor" : "sales" }) },
-    ]);
+    const actions = [
+      { text: "Batal", style: "cancel" as const },
+      { text: member.is_active ? "Nonaktifkan akun" : "Aktifkan akun", onPress: () => updateMember(member, { is_active: !member.is_active }) },
+    ];
+    if (profile?.role === "admin" && member.role !== "admin") {
+      actions.push({ text: member.role === "sales" ? "Jadikan Supervisor" : "Jadikan Sales", onPress: () => updateMember(member, { role: member.role === "sales" ? "supervisor" : "sales" }) } as typeof actions[number]);
+    }
+    Alert.alert(member.full_name || "Pengguna", "Pilih tindakan", actions);
   }
 
   if (profile?.role !== "admin" && profile?.role !== "supervisor") return <Redirect href="/(tabs)" />;
@@ -144,48 +130,29 @@ export default function AdminDashboard() {
   return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void load(); }} tintColor="#D71920" />}>
     <Pressable onPress={() => router.back()}><Text style={s.back}>‹ Kembali ke Profil</Text></Pressable>
     <View style={s.headerRow}><View style={{ flex: 1 }}><Text style={s.title}>Dasbor {profile.role === "admin" ? "Admin" : "Supervisor"}</Text><Text style={s.subtitle}>Performa tim dan manajemen pengguna.</Text></View></View>
-
     {loading ? <View style={s.loading}><ActivityIndicator color="#D71920" /><Text style={s.muted}>Memuat data tim...</Text></View> : <>
-      <View style={s.summary}>
-        <Text style={s.summaryLabel}>TOTAL AKTIVITAS TIM</Text>
-        <View style={s.summaryGrid}>
-          <View style={s.summaryItem}><Text style={s.summaryValue}>{totals.prospects}</Text><Text style={s.summaryText}>Prospek</Text></View>
-          <View style={s.summaryItem}><Text style={s.summaryValue}>{totals.spk}</Text><Text style={s.summaryText}>SPK</Text></View>
-          <View style={s.summaryItem}><Text style={s.summaryValue}>{totals.closing}</Text><Text style={s.summaryText}>Closing</Text></View>
-        </View>
-      </View>
-
+      <View style={s.summary}><Text style={s.summaryLabel}>TOTAL AKTIVITAS TIM</Text><View style={s.summaryGrid}>
+        <View style={s.summaryItem}><Text style={s.summaryValue}>{totals.prospects}</Text><Text style={s.summaryText}>Prospek</Text></View>
+        <View style={s.summaryItem}><Text style={s.summaryValue}>{totals.spk}</Text><Text style={s.summaryText}>SPK</Text></View>
+        <View style={s.summaryItem}><Text style={s.summaryValue}>{totals.closing}</Text><Text style={s.summaryText}>Closing</Text></View>
+      </View></View>
       {!!error && <Text style={s.error}>{error}</Text>}
-
       <View style={s.actionRow}>
         {profile.role === "admin" && <Pressable style={s.primaryButton} onPress={openUserModal}><Text style={s.primaryText}>+ Pengguna</Text></Pressable>}
         <Pressable style={s.exportButton} onPress={exportExcel}><Text style={s.exportText}>↓ Excel</Text></Pressable>
       </View>
-
       <Text style={s.section}>Pengguna & performa</Text>
       {members.map(member => {
         const item = stats[member.id] ?? zero;
-        return <View key={member.id} style={s.memberCard}>
-          <View style={s.memberTop}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.memberName}>{member.full_name || "Tanpa nama"}</Text>
-              <Text style={s.memberEmail}>{member.email || "-"}</Text>
-              <Text style={s.memberRole}>{member.role === "admin" ? "Admin" : member.role === "supervisor" ? "Supervisor" : "Sales"}</Text>
-            </View>
-            <Pressable onPress={() => manageMember(member)} style={[s.active, !member.is_active && s.inactive]}><Text>{member.is_active ? "Aktif" : "Nonaktif"}</Text></Pressable>
-          </View>
-          <View style={s.memberStats}>
-            <Text style={s.memberStat}>Prospek <Text style={s.statNumber}>{item.prospects}</Text></Text>
-            <Text style={s.memberStat}>SPK <Text style={s.statNumber}>{item.spk}</Text></Text>
-            <Text style={s.memberStat}>Jual <Text style={s.statNumber}>{item.closing}</Text></Text>
-          </View>
-        </View>;
+        return <View key={member.id} style={s.memberCard}><View style={s.memberTop}><View style={{ flex: 1 }}>
+          <Text style={s.memberName}>{member.full_name || "Tanpa nama"}</Text><Text style={s.memberEmail}>{member.email || "-"}</Text>
+          <Text style={s.memberRole}>{member.role === "admin" ? "Admin" : member.role === "supervisor" ? "Supervisor" : "Sales"}</Text>
+        </View><Pressable onPress={() => manageMember(member)} style={[s.active, !member.is_active && s.inactive]}><Text>{member.is_active ? "Aktif" : "Nonaktif"}</Text></Pressable></View>
+        <View style={s.memberStats}><Text style={s.memberStat}>Prospek <Text style={s.statNumber}>{item.prospects}</Text></Text><Text style={s.memberStat}>SPK <Text style={s.statNumber}>{item.spk}</Text></Text><Text style={s.memberStat}>Jual <Text style={s.statNumber}>{item.closing}</Text></Text></View></View>;
       })}
       {members.length === 0 && <Text style={s.muted}>Belum ada anggota tim.</Text>}
     </>}
-
-    <View style={s.notice}><Text style={s.noticeTitle}>Akses pengguna</Text><Text style={s.noticeText}>Admin dapat membuat akun baru. Admin dan Supervisor dapat mengaktifkan/nonaktifkan pengguna serta mengubah Sales menjadi Supervisor dan sebaliknya.</Text></View>
-
+    <View style={s.notice}><Text style={s.noticeTitle}>Akses pengguna</Text><Text style={s.noticeText}>Admin dapat membuat akun dan mengubah role Sales/Supervisor. Admin dan Supervisor dapat mengaktifkan atau menonaktifkan akun.</Text></View>
     <Modal visible={userModal} animationType="slide" transparent onRequestClose={() => setUserModal(false)}>
       <View style={s.overlay}><View style={s.sheet}><ScrollView keyboardShouldPersistTaps="handled">
         <Text style={s.sheetTitle}>Tambah pengguna</Text>
@@ -201,20 +168,19 @@ export default function AdminDashboard() {
 }
 
 const s = StyleSheet.create({
-  page:{flex:1,backgroundColor:"#F7F7FB"},content:{padding:22,paddingTop:26,paddingBottom:35},back:{fontSize:13,color:"#D71920",fontWeight:"700",marginBottom:18},
-  headerRow:{flexDirection:"row",alignItems:"center"},title:{fontSize:26,fontWeight:"800",color:"#202033"},subtitle:{fontSize:13,color:"#858597",marginTop:6},
-  loading:{padding:35,alignItems:"center",gap:10},muted:{fontSize:12,color:"#9292A3"},summary:{backgroundColor:"#D71920",borderRadius:20,padding:19,marginTop:22},
-  summaryLabel:{fontSize:10,fontWeight:"800",letterSpacing:1,color:"#FFD9D9"},summaryGrid:{flexDirection:"row",justifyContent:"space-between",marginTop:16},summaryItem:{flex:1},
-  summaryValue:{fontSize:27,fontWeight:"800",color:"#FFF"},summaryText:{fontSize:11,color:"#FFE8E8",marginTop:3},section:{fontSize:17,fontWeight:"800",color:"#242438",marginTop:26,marginBottom:12},
-  actionRow:{flexDirection:"row",gap:10,marginTop:18},primaryButton:{backgroundColor:"#D71920",paddingHorizontal:18,paddingVertical:12,borderRadius:12},primaryText:{fontSize:12,fontWeight:"800",color:"#FFF"},
-  exportButton:{backgroundColor:"#FFF",borderWidth:1,borderColor:"#D71920",paddingHorizontal:18,paddingVertical:12,borderRadius:12},exportText:{fontSize:12,fontWeight:"800",color:"#D71920"},
-  memberCard:{backgroundColor:"#FFF",borderRadius:17,padding:16,marginBottom:11,borderWidth:1,borderColor:"#EEEEF5"},memberTop:{flexDirection:"row",alignItems:"center"},
-  memberName:{fontSize:14,fontWeight:"800",color:"#29293D"},memberEmail:{fontSize:10,color:"#858597",marginTop:3},memberRole:{fontSize:11,color:"#D71920",fontWeight:"700",marginTop:4},
-  active:{fontSize:10,color:"#287A54",backgroundColor:"#E8F6EE",paddingHorizontal:9,paddingVertical:7,borderRadius:8,overflow:"hidden"},inactive:{color:"#B74747",backgroundColor:"#FCECEC"},
-  memberStats:{flexDirection:"row",gap:18,marginTop:14,paddingTop:12,borderTopWidth:1,borderTopColor:"#F0F0F5"},memberStat:{fontSize:11,color:"#858597"},statNumber:{fontWeight:"800",color:"#29293D"},
-  error:{fontSize:12,color:"#B74747",marginTop:12},notice:{backgroundColor:"#FFF",borderRadius:16,padding:16,marginTop:20,borderWidth:1,borderColor:"#EEEEF5"},noticeTitle:{fontSize:13,fontWeight:"800",color:"#29293D"},noticeText:{fontSize:11,color:"#858597",lineHeight:17,marginTop:6},
-  overlay:{flex:1,backgroundColor:"rgba(20,20,35,.42)",justifyContent:"flex-end"},sheet:{maxHeight:"92%",backgroundColor:"#FFF",borderTopLeftRadius:24,borderTopRightRadius:24,padding:22,paddingBottom:30},sheetTitle:{fontSize:20,fontWeight:"800",color:"#242438",marginBottom:18},
-  label:{fontSize:12,fontWeight:"700",color:"#45455A",marginTop:13,marginBottom:7},input:{height:47,borderWidth:1,borderColor:"#E8E8F0",borderRadius:12,paddingHorizontal:13,color:"#25253A",fontSize:13},
-  choices:{flexDirection:"row",flexWrap:"wrap",gap:7},choice:{paddingHorizontal:11,paddingVertical:9,borderRadius:9,borderWidth:1,borderColor:"#E8E8F0"},choiceActive:{backgroundColor:"#FCE8E8",borderColor:"#D71920"},choiceText:{fontSize:11,color:"#77778A"},choiceTextActive:{color:"#D71920",fontWeight:"800"},
+  page:{flex:1,backgroundColor:"#F7F7FB"},content:{padding:22,paddingTop:26,paddingBottom:35},back:{fontSize:13,color:"#D71920",fontWeight:"700",marginBottom:20},
+  headerRow:{flexDirection:"row",alignItems:"center",marginBottom:22},title:{fontSize:25,fontWeight:"800",color:"#202033"},subtitle:{fontSize:12,color:"#858597",marginTop:5},
+  loading:{padding:30,alignItems:"center",gap:10},muted:{fontSize:12,color:"#9292A3"},error:{fontSize:12,color:"#B74747",marginVertical:12},
+  summary:{backgroundColor:"#D71920",borderRadius:20,padding:20},summaryLabel:{color:"#FFE3E3",fontSize:10,fontWeight:"800",letterSpacing:1},
+  summaryGrid:{flexDirection:"row",justifyContent:"space-between",marginTop:16},summaryItem:{alignItems:"center",flex:1},summaryValue:{fontSize:27,fontWeight:"900",color:"#FFF"},summaryText:{fontSize:11,color:"#FFE3E3",marginTop:3},
+  actionRow:{flexDirection:"row",gap:10,marginTop:20},primaryButton:{backgroundColor:"#D71920",paddingHorizontal:18,paddingVertical:12,borderRadius:12},primaryText:{fontSize:12,color:"#FFF",fontWeight:"800"},
+  exportButton:{backgroundColor:"#FFF",borderWidth:1,borderColor:"#D71920",paddingHorizontal:18,paddingVertical:12,borderRadius:12},exportText:{fontSize:12,color:"#D71920",fontWeight:"800"},
+  section:{fontSize:16,fontWeight:"800",color:"#242438",marginTop:25,marginBottom:12},memberCard:{backgroundColor:"#FFF",padding:16,borderRadius:16,borderWidth:1,borderColor:"#EEEEF5",marginBottom:10},
+  memberTop:{flexDirection:"row",alignItems:"center",gap:10},memberName:{fontSize:14,fontWeight:"800",color:"#29293D"},memberEmail:{fontSize:11,color:"#858597",marginTop:3},memberRole:{fontSize:10,color:"#D71920",fontWeight:"800",marginTop:5},
+  active:{backgroundColor:"#E6F7ED",paddingHorizontal:10,paddingVertical:7,borderRadius:9},inactive:{backgroundColor:"#FDECEC"},memberStats:{flexDirection:"row",gap:18,marginTop:14,borderTopWidth:1,borderTopColor:"#F0F0F5",paddingTop:12},
+  memberStat:{fontSize:11,color:"#77778A"},statNumber:{fontWeight:"900",color:"#25253A"},notice:{backgroundColor:"#FFF",borderRadius:14,padding:15,marginTop:18,borderWidth:1,borderColor:"#EEEEF5"},noticeTitle:{fontSize:12,fontWeight:"800",color:"#29293D"},noticeText:{fontSize:11,color:"#858597",lineHeight:17,marginTop:5},
+  overlay:{flex:1,backgroundColor:"rgba(20,20,35,.42)",justifyContent:"flex-end"},sheet:{maxHeight:"92%",backgroundColor:"#FFF",borderTopLeftRadius:24,borderTopRightRadius:24,padding:22,paddingBottom:30},sheetTitle:{fontSize:20,fontWeight:"800",color:"#242438",marginBottom:12},
+  label:{fontSize:12,fontWeight:"700",color:"#45455A",marginTop:14,marginBottom:7},input:{height:47,borderWidth:1,borderColor:"#E8E8F0",borderRadius:12,paddingHorizontal:13,color:"#25253A",fontSize:13},
+  choices:{flexDirection:"row",gap:8,marginTop:4},choice:{paddingHorizontal:12,paddingVertical:10,borderRadius:10,borderWidth:1,borderColor:"#E8E8F0"},choiceActive:{backgroundColor:"#FCE8E8",borderColor:"#D71920"},choiceText:{fontSize:11,color:"#77778A"},choiceTextActive:{color:"#D71920",fontWeight:"800"},
   save:{height:50,backgroundColor:"#D71920",borderRadius:13,alignItems:"center",justifyContent:"center",marginTop:22},saveText:{fontSize:14,color:"#FFF",fontWeight:"800"},cancel:{padding:14,alignItems:"center"},cancelText:{fontSize:13,color:"#77778A",fontWeight:"700"}
 });
