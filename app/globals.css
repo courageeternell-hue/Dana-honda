@@ -12,3 +12,35 @@ label{display:flex;flex-direction:column;gap:6px;font-size:13px;font-weight:700}
 .toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:18px 0}.login{max-width:420px;margin:8vh auto;padding:28px}.login .formgrid{grid-template-columns:1fr}.footer{padding:30px 0;color:var(--muted);font-size:12px;text-align:center}
 .profile-page{max-width:760px}.profile-card{display:flex;align-items:center;gap:17px;background:linear-gradient(125deg,#fff,#f5efff);border:1px solid #ece4f7;border-radius:24px;padding:22px;margin-bottom:28px;box-shadow:0 8px 24px #54358b0d}.profile-avatar{width:66px;height:66px;display:grid;place-items:center;border-radius:22px;background:linear-gradient(145deg,#8054c4,#542c91);color:white}.profile-info h2{margin:0 0 5px}.profile-info p{font-size:12px;color:var(--muted);margin:0 0 9px}.role-chip{display:inline-block;padding:5px 9px;border-radius:30px;background:#eeeaf4;color:#6c5b82;font-size:9px;font-weight:800;letter-spacing:.6px}.role-chip.supervisor{background:#eee5ff;color:#663ca3}.section-label{margin:0 0 10px 3px}.menu-card{background:#fff;border:1px solid var(--line);border-radius:20px;overflow:hidden}.profile-menu-link{display:flex;align-items:center;gap:13px;padding:16px;border-bottom:1px solid #f2eff6}.profile-menu-link:last-child{border-bottom:0}.menu-icon{width:42px;height:42px;flex:0 0 42px;border-radius:14px;display:grid;place-items:center}.menu-icon.purple{background:#eee5ff;color:#6840a2}.menu-icon.lilac{background:#f4eafa;color:#9a60b9}.menu-icon.soft{background:#f6f4f8;color:#7c7489}.menu-copy{flex:1;min-width:0}.menu-copy strong,.menu-copy small{display:block}.menu-copy strong{font-size:13px}.menu-copy small{font-size:11px;color:var(--muted);margin-top:4px}.menu-chevron{color:#aaa3b5}.profile-menu-link.static{cursor:default}.logout-form{margin-top:18px}.logout-button{width:100%;border:1px solid #f2dce2;background:#fff;border-radius:14px;padding:14px;color:#bd4b64;font-weight:700;display:flex;align-items:center;justify-content:center;gap:9px}.profile-footnote{text-align:center;color:#a29bac;font-size:10px;margin-top:22px}
 @media(max-width:760px){body{padding-bottom:100px}.shell{padding:15px}.app-header{height:62px;padding:0 16px}.header-user{font-size:11px}.grid{grid-template-columns:repeat(2,1fr);gap:10px}.formgrid{grid-template-columns:1fr}h1{font-size:23px}.card{padding:15px}.bottom-nav{bottom:10px;height:68px;border-radius:22px}.profile-card{padding:17px}.profile-avatar{width:58px;height:58px;border-radius:19px}}
+
+
+/* Asisten Sales branded login */
+.login-screen{min-height:100svh;background:#fff;color:#24242b;display:flex;flex-direction:column;overflow:hidden}
+.login-hero{position:relative;isolation:isolate;overflow:hidden;min-height:390px;padding:34px max(28px,calc((100vw - 620px)/2)) 92px;background:linear-gradient(145deg,#e60012,#c90012);color:#fff}
+.login-brand{display:flex;align-items:center;gap:16px;position:relative;z-index:2}
+.login-brand>div:last-child strong,.login-brand>div:last-child span{display:block}
+.login-brand>div:last-child strong{font-size:22px;font-weight:900;font-style:italic;letter-spacing:.3px}
+.login-brand>div:last-child span{font-size:12px;font-weight:800;letter-spacing:2px;margin-top:7px}
+.honda-mark{width:76px;height:76px;border-radius:21px;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:none;padding:8px;color:#d71920;box-shadow:0 5px 18px #78000b22}
+.honda-mark svg{width:54px;height:42px}
+.honda-mark strong{font-size:12px;line-height:1;font-weight:900}
+.honda-mark small{font-size:9px;line-height:1.2;font-weight:900;color:#171717}
+.login-headline{position:relative;z-index:2;font-size:clamp(34px,7vw,46px);line-height:1.13;font-weight:900;font-style:italic;letter-spacing:-1.2px;margin-top:48px}
+.login-hero>p{position:relative;z-index:2;font-size:17px;line-height:1.55;margin:18px 0 0;color:#ffe8e9}
+.hero-orbit{position:absolute;z-index:-1;width:300px;height:300px;border:38px solid #ffffff12;border-radius:50%;right:-145px;bottom:-145px}
+.login-panel{position:relative;z-index:3;background:#fff;border-radius:34px 34px 0 0;margin-top:-38px;padding:42px max(28px,calc((100vw - 620px)/2)) 38px;flex:1}
+.login-panel h1{font-size:34px;letter-spacing:-.8px;margin:0 0 8px;font-weight:900}
+.login-subtitle{font-size:15px;line-height:1.55;color:#888891;margin:0 0 30px}
+.login-form{display:flex;flex-direction:column;gap:10px}
+.login-form>label{font-size:15px;font-weight:800;margin-top:6px}
+.login-input-wrap{height:62px;border:1px solid #e2e2e5;border-radius:18px;background:#fff;display:flex;align-items:center;gap:13px;padding:0 16px;box-shadow:0 1px 3px #00000008}
+.login-input-wrap>span{color:#92929c;font-size:21px;min-width:20px;text-align:center}
+.login-input-wrap input{border:0!important;outline:0!important;box-shadow:none!important;padding:0!important;height:100%;font-size:16px;background:transparent!important}
+.password-toggle{border:0;background:transparent;color:#777783;font-size:12px;font-weight:700;padding:8px}
+.login-submit{position:relative;width:100%;height:64px;margin-top:14px;border:0;border-radius:19px;background:linear-gradient(110deg,#f00016,#ca0013);color:#fff;font-size:22px;font-weight:900;letter-spacing:.5px;box-shadow:0 9px 18px #d7192033;cursor:pointer}
+.login-submit span{position:absolute;right:22px;top:50%;transform:translateY(-55%);font-size:34px;font-weight:400}
+.login-submit:disabled{opacity:.7;cursor:wait}
+.forgot-link{text-align:center;margin:20px 0 0;font-size:16px;font-weight:800;color:#d71920}
+.login-help{text-align:center;color:#92929a;font-size:14px;line-height:1.6;margin:38px 0 0}
+.login-footer{background:#f5f5f6;color:#96969e;text-align:center;padding:24px 12px;font-size:11px;font-weight:900;letter-spacing:1.2px}
+@media(max-width:600px){.login-hero{min-height:425px;padding:32px 22px 88px}.login-brand>div:last-child strong{font-size:19px}.login-brand>div:last-child span{font-size:10px;letter-spacing:1.6px}.login-headline{font-size:40px;margin-top:48px}.login-hero>p{font-size:16px}.login-panel{padding:42px 22px 36px}.login-panel h1{font-size:32px}.login-subtitle{font-size:14px;margin-bottom:28px}.login-input-wrap{height:60px}.login-submit{height:62px}.login-help{margin-top:36px}.login-footer{padding:22px 8px;font-size:10px;letter-spacing:.8px}}
