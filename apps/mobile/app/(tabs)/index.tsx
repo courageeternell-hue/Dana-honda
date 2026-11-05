@@ -57,6 +57,8 @@ export default function HomeScreen() {
 
   useEffect(() => { loadMetrics(); }, [loadMetrics]);
   const refresh = () => { setRefreshing(true); loadMetrics(); };
+  const prospectProgress = metrics.prospectTarget > 0 ? Math.min(100, Math.round(metrics.prospects / metrics.prospectTarget * 100)) : 0;
+  const spkProgress = metrics.spkTarget > 0 ? Math.min(100, Math.round(metrics.spk / metrics.spkTarget * 100)) : 0;
 
   return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#5B4BDB" />}>
     <Text style={s.eyebrow}>HONDA SALES</Text><Text style={s.title}>Beranda</Text>
@@ -73,7 +75,17 @@ export default function HomeScreen() {
       {!!error && <Text style={s.error}>Data belum bisa dimuat: {error}</Text>}
     </>}
     <Text style={s.section}>Target bulan ini</Text>
-    <View style={s.targetCard}><Text style={s.targetLabel}>Target prospek</Text><Text style={s.targetValue}>{metrics.prospectTarget || "Belum diatur"}</Text><Text style={s.targetHint}>Target ditentukan oleh admin atau supervisor.</Text></View>
+    <View style={s.targetCard}>
+      <View style={s.progressHeader}><Text style={s.targetLabel}>Target prospek</Text><Text style={s.progressPercent}>{metrics.prospectTarget ? `${prospectProgress}%` : "—"}</Text></View>
+      <Text style={s.targetValue}>{metrics.prospects} / {metrics.prospectTarget || "Belum diatur"}</Text>
+      <View style={s.progressTrack}><View style={[s.progressFill,{width:`${prospectProgress}%`}]}/></View>
+      <Text style={s.targetHint}>Pencapaian prospek bulan ini</Text>
+      <View style={[s.progressHeader,{marginTop:18}]}><Text style={s.targetLabel}>Target SPK</Text><Text style={s.progressPercent}>{metrics.spkTarget ? `${spkProgress}%` : "—"}</Text></View>
+      <Text style={s.targetValue}>{metrics.spk} / {metrics.spkTarget || "Belum diatur"}</Text>
+      <View style={s.progressTrack}><View style={[s.progressFill,{width:`${spkProgress}%`}]}/></View>
+      <Text style={s.targetHint}>Pencapaian SPK bulan ini</Text>
+      <Text style={[s.targetHint,{marginTop:12}]}>Target ditentukan oleh Admin atau Supervisor.</Text>
+    </View>
   </ScrollView>;
 }
 
@@ -86,5 +98,5 @@ const s = StyleSheet.create({
   grid:{flexDirection:"row",flexWrap:"wrap",gap:12},stat:{width:"48%",flexGrow:1,backgroundColor:"#FFFFFF",borderRadius:17,padding:16,borderWidth:1,borderColor:"#EEEEF5"},
   statLabel:{fontSize:12,color:"#77778A",fontWeight:"600"},statValue:{fontSize:25,fontWeight:"800",color:"#26263B",marginTop:8},statNote:{fontSize:11,color:"#9A9AAA",marginTop:4},
   loading:{padding:28,alignItems:"center",gap:10},loadingText:{fontSize:12,color:"#858597"},error:{fontSize:12,color:"#B74747",marginTop:12,lineHeight:18},
-  targetCard:{backgroundColor:"#FFF",borderRadius:17,padding:18,borderWidth:1,borderColor:"#EEEEF5"},targetLabel:{fontSize:12,color:"#77778A"},targetValue:{fontSize:24,fontWeight:"800",color:"#26263B",marginTop:7},targetHint:{fontSize:11,color:"#9A9AAA",marginTop:4}
+  targetCard:{backgroundColor:"#FFF",borderRadius:17,padding:18,borderWidth:1,borderColor:"#EEEEF5"},progressHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},targetLabel:{fontSize:12,color:"#77778A",fontWeight:"700"},progressPercent:{fontSize:12,color:"#D71920",fontWeight:"900"},targetValue:{fontSize:24,fontWeight:"800",color:"#26263B",marginTop:7},progressTrack:{height:9,backgroundColor:"#F0F0F5",borderRadius:9,overflow:"hidden",marginTop:10},progressFill:{height:9,backgroundColor:"#D71920",borderRadius:9},targetHint:{fontSize:11,color:"#9A9AAA",marginTop:4}
 });
