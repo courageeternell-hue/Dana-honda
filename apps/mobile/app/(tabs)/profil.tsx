@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Alert, ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Alert, ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as XLSX from "xlsx-js-style";
@@ -8,202 +9,19 @@ import * as ImagePicker from "expo-image-picker";
 import { decode } from "base64-arraybuffer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-
-const roleLabel = { admin: "Administrator", supervisor: "Supervisor", sales: "Sales" } as const;
-
-export default function ProfileScreen() {
-  const { profile, signOut, reloadProfile } = useAuth();
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [exportingExcel, setExportingExcel] = useState(false);
-  const canManage = profile?.role === "admin" || profile?.role === "supervisor";
-
-  async function chooseProfilePhoto() {
-    if (!profile || uploadingPhoto) return;
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsMultipleSelection: false,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.82,
-        base64: true,
-      });
-      if (result.canceled || !result.assets?.[0]) return;
-      const asset = result.assets[0];
-      if (!asset.base64) {
-        Alert.alert("Foto tidak terbaca", "Pilih foto lain dari galeri.");
-        return;
-      }
-      if (asset.fileSize && asset.fileSize > 3 * 1024 * 1024) {
-        Alert.alert("Ukuran foto terlalu besar", "Pilih foto dengan ukuran maksimal 3 MB.");
-        return;
-      }
-      const mimeType = asset.mimeType || "image/jpeg";
-      const extension = mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";
-      const filePath = `${profile.id}/avatar-${Date.now()}.${extension}`;
-      setUploadingPhoto(true);
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(filePath, decode(asset.base64), {
-          contentType: mimeType,
-          cacheControl: "3600",
-          upsert: false,
-        });
-      if (uploadError) throw uploadError;
-      const { data } = supabase.storage.from("avatars").getPublicUrl(filePath);
-      const avatarUrl = data.publicUrl;
-      const { error: updateError } = await supabase
-        .from("profile_avatars")
-        .upsert({ user_id: profile.id, avatar_url: avatarUrl, updated_at: new Date().toISOString() }, { onConflict: "user_id" });
-      if (updateError) throw updateError;
-      await reloadProfile();
-      Alert.alert("Berhasil", "Foto profil berhasil diperbarui.");
-    } catch (error) {
-      Alert.alert("Gagal mengganti foto", error instanceof Error ? error.message : "Coba lagi beberapa saat.");
-    } finally {
-      setUploadingPhoto(false);
-    }
-  }
-
-  async function exportMyExcel() {
-    if (!profile || exportingExcel) return;
-    setExportingExcel(true);
-    try {
-      const [prospects, spks] = await Promise.all([
-        supabase.from("prospects")
-          .select("prospect_date,customer_name,phone,source,unit_interest,status,deal_status,lead_response,notes,spk_created")
-          .eq("user_id", profile.id)
-          .order("prospect_date", { ascending: false }),
-        supabase.from("spk_records")
-          .select("spk_date,sales_name,customer_name,address,source,unit_type,dp_cash,leasing,status,notes")
-          .eq("user_id", profile.id)
-          .order("spk_date", { ascending: false }),
-      ]);
-      if (prospects.error) throw prospects.error;
-      if (spks.error) throw spks.error;
-
-      const workbook = XLSX.utils.book_new();
-      const prospectRows = [
-        ["No", "Tanggal", "Nama Konsumen", "No Hp konsumen", "Prospek Up", "Respon", "Tertarik", "Deal", "SPK", "Keterangan"],
-        ...(prospects.data ?? []).map((row, index) => [
-          index + 1, row.prospect_date || "", row.customer_name || "", row.phone || "",
-          row.source || "", row.lead_response || row.status || "",
-          row.status === "Tertarik" ? "Ya" : "Tidak", row.deal_status || "",
-          row.spk_created ? "Ya" : "Tidak", row.notes || "",
-        ]),
-      ];
-      const spkRows = [
-        ["Tanggal", "Nama Sales", "Nama Konsumen", "Alamat Konsumen", "Sumber SPK", "Type Unit", "Harga", "Leasing/ Keterangan", "Status"],
-        ...(spks.data ?? []).map(row => [
-          row.spk_date || "", row.sales_name || profile.full_name || "", row.customer_name || "",
-          row.address || "", row.source || "", row.unit_type || "", row.dp_cash || "",
-          [row.leasing, row.notes].filter(Boolean).join(" / "), row.status || "",
-        ]),
-      ];
-      const prospectSheet = XLSX.utils.aoa_to_sheet(prospectRows);
-      const spkSheet = XLSX.utils.aoa_to_sheet(spkRows);
-      const styleTable = (sheet: XLSX.WorkSheet, rowCount: number, colCount: number, widths: number[]) => {
-        sheet["!cols"] = widths.map(wch => ({ wch }));
-        sheet["!rows"] = Array.from({ length: rowCount }, (_, r) => ({ hpt: r === 0 ? 30 : 25 }));
-        for (let r = 0; r < rowCount; r++) {
-          for (let col = 0; col < colCount; col++) {
-            const cell = sheet[XLSX.utils.encode_cell({ r, c: col })] as any;
-            if (!cell) continue;
-            cell.s = {
-              font: { name: "Times New Roman", sz: 11, bold: r === 0 },
-              alignment: { horizontal: "center", vertical: "center", wrapText: true },
-              border: {
-                top: { style: "thin", color: { rgb: "D9D9D9" } },
-                bottom: { style: "thin", color: { rgb: "D9D9D9" } },
-                left: { style: "thin", color: { rgb: "D9D9D9" } },
-                right: { style: "thin", color: { rgb: "D9D9D9" } },
-              },
-              ...(r === 0 ? { fill: { patternType: "solid", fgColor: { rgb: "FCE8E8" } } } : {}),
-            };
-          }
-        }
-        sheet["!autofilter"] = { ref: XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: rowCount - 1, c: colCount - 1 } }) };
-      };
-      styleTable(prospectSheet, prospectRows.length, 10, [6, 13, 24, 18, 18, 18, 12, 12, 10, 28]);
-      styleTable(spkSheet, spkRows.length, 9, [13, 20, 24, 30, 18, 18, 18, 28, 14]);
-      XLSX.utils.book_append_sheet(workbook, prospectSheet, "Buku Prospek");
-      XLSX.utils.book_append_sheet(workbook, spkSheet, "Buku SPK");
-      const base64 = XLSX.write(workbook, { bookType: "xlsx", type: "base64" });
-      const safeName = (profile.full_name || "sales").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      const uri = `${FileSystem.cacheDirectory}laporan-${safeName || "sales"}-${Date.now()}.xlsx`;
-      await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, {
-          mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          dialogTitle: "Download Laporan Excel Saya",
-          UTI: "com.microsoft.excel.xlsx",
-        });
-      } else {
-        Alert.alert("Excel siap", "File laporan berhasil dibuat, tetapi fitur berbagi tidak tersedia di perangkat ini.");
-      }
-    } catch (error) {
-      Alert.alert("Gagal membuat Excel", error instanceof Error ? error.message : "Coba lagi beberapa saat.");
-    } finally {
-      setExportingExcel(false);
-    }
-  }
-
-  async function confirmSignOut() {
-    Alert.alert("Keluar akun", "Yakin ingin keluar dari aplikasi?", [
-      { text: "Batal", style: "cancel" },
-      { text: "Keluar", style: "destructive", onPress: async () => { try { await signOut(); router.replace("/login"); } catch { Alert.alert("Gagal keluar", "Coba lagi."); } } }
-    ]);
-  }
-
-  return <View style={s.page}>
-    <Text style={s.title}>Profil</Text>
-    <View style={s.profile}>
-      <Pressable onPress={chooseProfilePhoto} disabled={uploadingPhoto} style={s.avatarWrap} accessibilityRole="button" accessibilityLabel="Ganti foto profil">
-        {profile?.avatar_url
-          ? <Image source={{ uri: profile.avatar_url }} style={s.avatarImage} />
-          : <View style={s.avatar}><Text style={s.avatarText}>{(profile?.full_name || "AS").slice(0,1).toUpperCase()}</Text></View>}
-        <View style={s.cameraBadge}><Text style={s.cameraText}>✎</Text></View>
-      </Pressable>
-      <View style={{flex:1}}>
-        <Text style={s.name}>{profile?.full_name || "Pengguna Asisten Sales"}</Text>
-        <Text style={s.role}>{roleLabel[profile?.role ?? "sales"]}</Text>
-        <Text style={s.email}>{profile?.email || ""}</Text>
-        <Pressable onPress={chooseProfilePhoto} disabled={uploadingPhoto} style={s.photoButton}>
-          {uploadingPhoto ? <ActivityIndicator color="#FFFFFF" size="small" /> : <Text style={s.photoButtonText}>{profile?.avatar_url ? "Ubah foto profil" : "Tambah foto profil"}</Text>}
-        </Pressable>
-      </View>
-    </View>
-    <Text style={s.section}>Menu akun</Text>
-    <View style={s.menu}>
-      {canManage && <Pressable style={s.menuItem} onPress={() => router.push("/admin")}><Text style={s.menuText}>Kelola Pengguna & Tim</Text><Text style={s.chevron}>›</Text></Pressable>}
-      <Pressable style={s.menuItem} onPress={exportMyExcel} disabled={exportingExcel}><Text style={s.menuText}>{exportingExcel ? "Menyiapkan Excel..." : "Download Excel Laporan Saya"}</Text><Text style={s.chevron}>{exportingExcel ? "…" : "↓"}</Text></Pressable>
-      <Pressable style={s.menuItem} onPress={() => Alert.alert("Informasi akun", `Nama: ${profile?.full_name || "-"}\nEmail: ${profile?.email || "-"}\nRole: ${roleLabel[profile?.role ?? "sales"]}`, [{ text: "Tutup" }])}><Text style={s.menuText}>Informasi akun</Text><Text style={s.chevron}>›</Text></Pressable>
-    </View>
-    <Pressable onPress={confirmSignOut} style={s.logout}><Text style={s.logoutText}>Keluar akun</Text></Pressable>
-    <Text style={s.note}>Semua pengguna dapat mengganti foto profil melalui galeri. Hak akses mengikuti role yang ditetapkan administrator.</Text>
-  </View>;
+const roleLabel={admin:"Administrator",supervisor:"Supervisor",sales:"Sales"} as const;
+export default function ProfileScreen(){
+ const {profile,signOut,reloadProfile}=useAuth();const [uploadingPhoto,setUploadingPhoto]=useState(false);const [exportingExcel,setExportingExcel]=useState(false);const canManage=profile?.role==="admin"||profile?.role==="supervisor";
+ async function chooseProfilePhoto(){if(!profile||uploadingPhoto)return;try{const result=await ImagePicker.launchImageLibraryAsync({mediaTypes:["images"],allowsMultipleSelection:false,allowsEditing:true,aspect:[1,1],quality:.82,base64:true});if(result.canceled||!result.assets?.[0])return;const asset=result.assets[0];if(!asset.base64){Alert.alert("Foto tidak terbaca","Pilih foto lain dari galeri.");return;}if(asset.fileSize&&asset.fileSize>3*1024*1024){Alert.alert("Ukuran foto terlalu besar","Pilih foto maksimal 3 MB.");return;}const mime=asset.mimeType||"image/jpeg";const ext=mime==="image/png"?"png":mime==="image/webp"?"webp":"jpg";const path=`${profile.id}/avatar-${Date.now()}.${ext}`;setUploadingPhoto(true);const {error:upErr}=await supabase.storage.from("avatars").upload(path,decode(asset.base64),{contentType:mime,cacheControl:"3600",upsert:false});if(upErr)throw upErr;const {data}=supabase.storage.from("avatars").getPublicUrl(path);const {error}=await supabase.from("profile_avatars").upsert({user_id:profile.id,avatar_url:data.publicUrl,updated_at:new Date().toISOString()},{onConflict:"user_id"});if(error)throw error;await reloadProfile();Alert.alert("Berhasil","Foto profil diperbarui.");}catch(e){Alert.alert("Gagal mengganti foto",e instanceof Error?e.message:"Coba lagi.");}finally{setUploadingPhoto(false);}}
+ async function exportMyExcel(){if(!profile||exportingExcel)return;setExportingExcel(true);try{const [prospects,spks]=await Promise.all([supabase.from("prospects").select("prospect_date,customer_name,phone,source,unit_interest,status,deal_status,lead_response,notes,spk_created").eq("user_id",profile.id).order("prospect_date",{ascending:false}),supabase.from("spk_records").select("spk_date,sales_name,customer_name,address,source,unit_type,dp_cash,leasing,status,notes").eq("user_id",profile.id).order("spk_date",{ascending:false})]);if(prospects.error)throw prospects.error;if(spks.error)throw spks.error;const wb=XLSX.utils.book_new();const pr=[["No","Tanggal","Nama Konsumen","No Hp konsumen","Prospek Up","Respon","Tertarik","Deal","SPK","Keterangan"],...(prospects.data??[]).map((x,i)=>[i+1,x.prospect_date||"",x.customer_name||"",x.phone||"",x.source||"",x.lead_response||x.status||"",x.status==="Tertarik"?"Ya":"Tidak",x.deal_status||"",x.spk_created?"Ya":"Tidak",x.notes||""])];const sr=[["Tanggal","Nama Sales","Nama Konsumen","Alamat Konsumen","Sumber SPK","Type Unit","Harga","Leasing/ Keterangan","Status"],...(spks.data??[]).map(x=>[x.spk_date||"",x.sales_name||profile.full_name||"",x.customer_name||"",x.address||"",x.source||"",x.unit_type||"",x.dp_cash||"",[x.leasing,x.notes].filter(Boolean).join(" / "),x.status||""])];const style=(sh:XLSX.WorkSheet,rows:number,cols:number,widths:number[])=>{sh["!cols"]=widths.map(wch=>({wch}));sh["!rows"]=Array.from({length:rows},(_,i)=>({hpt:i===0?30:25}));for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const cell=sh[XLSX.utils.encode_cell({r,c})] as any;if(cell)cell.s={font:{name:"Times New Roman",sz:11,bold:r===0},alignment:{horizontal:"center",vertical:"center",wrapText:true},border:{top:{style:"thin",color:{rgb:"D9D9D9"}},bottom:{style:"thin",color:{rgb:"D9D9D9"}},left:{style:"thin",color:{rgb:"D9D9D9"}},right:{style:"thin",color:{rgb:"D9D9D9"}}},...(r===0?{fill:{patternType:"solid",fgColor:{rgb:"FCE8E8"}}}:{})};}sh["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows-1,c:cols-1}})};};const ps=XLSX.utils.aoa_to_sheet(pr),ss=XLSX.utils.aoa_to_sheet(sr);style(ps,pr.length,10,[6,13,24,18,18,18,12,12,10,28]);style(ss,sr.length,9,[13,20,24,30,18,18,18,28,14]);XLSX.utils.book_append_sheet(wb,ps,"Buku Prospek");XLSX.utils.book_append_sheet(wb,ss,"Buku SPK");const base64=XLSX.write(wb,{bookType:"xlsx",type:"base64"});const name=(profile.full_name||"sales").toLowerCase().replace(/[^a-z0-9]+/g,"-");const uri=`${FileSystem.cacheDirectory}laporan-${name}-${Date.now()}.xlsx`;await FileSystem.writeAsStringAsync(uri,base64,{encoding:FileSystem.EncodingType.Base64});if(await Sharing.isAvailableAsync())await Sharing.shareAsync(uri,{mimeType:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",dialogTitle:"Download Laporan Excel Saya",UTI:"com.microsoft.excel.xlsx"});else Alert.alert("Excel siap","File berhasil dibuat.");}catch(e){Alert.alert("Gagal membuat Excel",e instanceof Error?e.message:"Coba lagi.");}finally{setExportingExcel(false);}}
+ async function logout(){Alert.alert("Keluar akun","Yakin ingin keluar dari aplikasi?",[{text:"Batal",style:"cancel"},{text:"Keluar",style:"destructive",onPress:async()=>{try{await signOut();router.replace("/login");}catch{Alert.alert("Gagal keluar","Coba lagi.");}}}]);}
+ const menu=(icon:keyof typeof Ionicons.glyphMap,label:string,onPress:()=>void,danger=false)=><Pressable style={s.menuItem} onPress={onPress}><View style={s.menuIcon}><Ionicons name={icon} size={19} color={danger?"#E60012":"#55555E"}/></View><Text style={[s.menuText,danger&&{color:"#E60012"}]}>{label}</Text><Ionicons name="chevron-forward" size={18} color="#B5B5BC"/></Pressable>;
+ return <ScrollView style={s.page} contentContainerStyle={s.content}><View style={s.redHeader}><Text style={s.headerTitle}>Profil Saya</Text><Text style={s.headerSub}>Informasi akun dan pengaturan aplikasi</Text></View><View style={s.profileCard}>
+  <Pressable onPress={chooseProfilePhoto} disabled={uploadingPhoto} style={s.avatarWrap}>{profile?.avatar_url?<Image source={{uri:profile.avatar_url}} style={s.avatarImage}/>:<View style={s.avatar}><Text style={s.avatarText}>{(profile?.full_name||"AS").slice(0,1).toUpperCase()}</Text></View>}<View style={s.camera}><Ionicons name="camera" size={13} color="#FFF"/></View></Pressable>
+  <Text style={s.name}>{profile?.full_name||"Pengguna Asisten Sales"}</Text><View style={s.roleBadge}><Text style={s.roleText}>{roleLabel[profile?.role??"sales"]}</Text></View><Text style={s.email}>{profile?.email||"Email tidak tersedia"}</Text>
+  <Pressable onPress={chooseProfilePhoto} disabled={uploadingPhoto} style={s.photoButton}>{uploadingPhoto?<ActivityIndicator color="#FFF"/>:<Text style={s.photoText}>{profile?.avatar_url?"Ubah Foto Profil":"Tambah Foto Profil"}</Text>}</Pressable>
+ </View>
+ <Text style={s.section}>Akun & Aplikasi</Text><View style={s.menu}>{menu("person-circle-outline","Informasi Akun",()=>router.push("/account"))}{menu("settings-outline","Pengaturan",()=>router.push("/settings"))}{canManage&&menu("people-outline","Kelola Pengguna & Tim",()=>router.push("/admin"))}{menu("download-outline",exportingExcel?"Menyiapkan Excel...":"Download Excel Laporan Saya",exportMyExcel)}{menu("information-circle-outline","Tentang Aplikasi",()=>Alert.alert("Asisten Sales","Sales Management App"))}{menu("help-circle-outline","Bantuan & Panduan",()=>Alert.alert("Bantuan","Hubungi Admin atau Supervisor untuk bantuan akses."))}{menu("log-out-outline","Keluar",logout,true)}</View>
+ <Text style={s.note}>Hak akses aplikasi mengikuti role yang ditetapkan administrator.</Text></ScrollView>;
 }
-
-const s=StyleSheet.create({
- page:{flex:1,backgroundColor:"#F7F7F7",padding:22,paddingTop:30},
- title:{fontSize:28,fontWeight:"800",color:"#202033"},
- profile:{marginTop:22,backgroundColor:"#FFF",padding:18,borderRadius:18,flexDirection:"row",alignItems:"center",gap:14,borderWidth:1,borderColor:"#EEEEEE"},
- avatarWrap:{width:62,height:62,position:"relative"},
- avatar:{width:62,height:62,borderRadius:20,backgroundColor:"#FCE8E8",alignItems:"center",justifyContent:"center"},
- avatarImage:{width:62,height:62,borderRadius:20,backgroundColor:"#FCE8E8"},
- avatarText:{fontSize:22,fontWeight:"800",color:"#D71920"},
- cameraBadge:{position:"absolute",right:-4,bottom:-4,width:24,height:24,borderRadius:12,backgroundColor:"#D71920",alignItems:"center",justifyContent:"center",borderWidth:2,borderColor:"#FFF"},
- cameraText:{fontSize:14,color:"#FFF",fontWeight:"800"},
- name:{fontSize:15,fontWeight:"800",color:"#25253A"},
- role:{fontSize:12,color:"#D71920",fontWeight:"700",marginTop:3},
- email:{fontSize:11,color:"#858597",marginTop:3},
- photoButton:{alignSelf:"flex-start",backgroundColor:"#D71920",paddingHorizontal:12,paddingVertical:8,borderRadius:9,marginTop:10,minWidth:112,alignItems:"center"},
- photoButtonText:{fontSize:11,fontWeight:"800",color:"#FFF"},
- section:{fontSize:16,fontWeight:"800",color:"#242438",marginTop:26,marginBottom:12},
- menu:{backgroundColor:"#FFF",borderRadius:18,paddingHorizontal:18,borderWidth:1,borderColor:"#EEEEEE"},
- menuItem:{minHeight:52,flexDirection:"row",alignItems:"center",justifyContent:"space-between",borderBottomWidth:1,borderBottomColor:"#F0F0F0"},
- menuText:{fontSize:14,color:"#333348",fontWeight:"600"},chevron:{fontSize:24,color:"#A0A0AE"},
- logout:{marginTop:24,backgroundColor:"#FFF",borderColor:"#F0DCDC",borderWidth:1,borderRadius:14,padding:16,alignItems:"center"},
- logoutText:{fontSize:14,fontWeight:"800",color:"#C44545"},
- note:{fontSize:12,color:"#858597",lineHeight:18,marginTop:12}
-});
+const s=StyleSheet.create({page:{flex:1,backgroundColor:"#F6F6F7"},content:{paddingBottom:30},redHeader:{backgroundColor:"#E60012",paddingHorizontal:22,paddingTop:32,paddingBottom:62,borderBottomLeftRadius:25,borderBottomRightRadius:25},headerTitle:{fontSize:27,fontWeight:"900",fontStyle:"italic",color:"#FFF"},headerSub:{fontSize:11,color:"#FFE4E6",marginTop:5},profileCard:{marginHorizontal:20,marginTop:-39,backgroundColor:"#FFF",borderRadius:22,padding:20,alignItems:"center",borderWidth:1,borderColor:"#F0F0F1",elevation:3,shadowColor:"#222",shadowOpacity:.06,shadowRadius:10,shadowOffset:{width:0,height:4}},avatarWrap:{width:82,height:82,position:"relative"},avatar:{width:82,height:82,borderRadius:28,backgroundColor:"#FCE8EA",alignItems:"center",justifyContent:"center"},avatarImage:{width:82,height:82,borderRadius:28,backgroundColor:"#FCE8EA"},avatarText:{fontSize:30,fontWeight:"900",color:"#E60012"},camera:{position:"absolute",right:-3,bottom:-3,width:27,height:27,borderRadius:14,backgroundColor:"#E60012",alignItems:"center",justifyContent:"center",borderWidth:2,borderColor:"#FFF"},name:{fontSize:18,fontWeight:"900",color:"#24242A",marginTop:13},roleBadge:{backgroundColor:"#FFF0F1",paddingHorizontal:13,paddingVertical:5,borderRadius:20,marginTop:7},roleText:{fontSize:10,fontWeight:"900",color:"#E60012"},email:{fontSize:11,color:"#85858E",marginTop:7},photoButton:{backgroundColor:"#E60012",borderRadius:11,paddingHorizontal:17,paddingVertical:10,marginTop:13,minWidth:140,alignItems:"center"},photoText:{fontSize:11,fontWeight:"800",color:"#FFF"},section:{fontSize:16,fontWeight:"900",color:"#24242A",marginHorizontal:21,marginTop:25,marginBottom:12},menu:{marginHorizontal:20,backgroundColor:"#FFF",borderRadius:18,paddingHorizontal:14,borderWidth:1,borderColor:"#EFEFF1"},menuItem:{minHeight:55,flexDirection:"row",alignItems:"center",gap:12,borderBottomWidth:1,borderBottomColor:"#F2F2F3"},menuIcon:{width:35,height:35,borderRadius:11,backgroundColor:"#F7F7F8",alignItems:"center",justifyContent:"center"},menuText:{flex:1,fontSize:12,fontWeight:"700",color:"#36363E"},note:{fontSize:10,color:"#9999A1",textAlign:"center",marginTop:15,marginHorizontal:25,lineHeight:16}});
