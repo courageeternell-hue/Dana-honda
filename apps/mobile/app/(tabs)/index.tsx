@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,7 +15,7 @@ export default function HomeScreen(){
  useEffect(()=>{loadMetrics();},[loadMetrics]);const refresh=()=>{setRefreshing(true);loadMetrics();};
  const first=(profile?.full_name||"Sales").trim().split(/\s+/)[0];
  return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#E60012"/>}>
-  <View style={s.top}><View><Text style={s.eyebrow}>ASISTEN SALES</Text><Text style={s.greeting}>Halo, {first}</Text><Text style={s.subtitle}>Semangat capai target hari ini!</Text></View><Pressable onPress={()=>router.push("/(tabs)/profil")} style={s.avatar}><Text style={s.avatarText}>{(profile?.full_name||"S").slice(0,1).toUpperCase()}</Text></Pressable></View>
+  <View style={s.top}><View style={s.brandBlock}><View style={s.brandLine}><Image source={require("../../assets/dana-honda-icon.png")} style={s.brandLogo} resizeMode="contain"/><Text style={s.eyebrow}>ASISTEN SALES</Text></View><Text style={s.greeting}>Halo, {first}</Text><Text style={s.subtitle}>Semangat capai target hari ini!</Text></View><Pressable onPress={()=>router.push("/(tabs)/profil")} style={s.avatar}><Text style={s.avatarText}>{(profile?.full_name||"S").slice(0,1).toUpperCase()}</Text></Pressable></View>
   {(profile?.role==="admin"||profile?.role==="supervisor")&&<Pressable onPress={()=>router.push("/admin")} style={s.manage}><Ionicons name="people-outline" color="#FFF" size={17}/><Text style={s.manageText}>Kelola Pengguna & Tim</Text><Ionicons name="chevron-forward" color="#FFF" size={17}/></Pressable>}
   <View style={s.hero}><View style={s.heroCopy}><Text style={s.heroEyebrow}>PERFORMA BULAN INI</Text><Text style={s.heroTitle}>Total Prospek</Text><Text style={s.heroNumber}>{loading?"—":metrics.prospects}</Text><Text style={s.heroFoot}>Pantau setiap peluang menjadi penjualan.</Text></View><View style={s.heroArt}><Ionicons name="trending-up" size={58} color="rgba(255,255,255,.22)"/><View style={s.heroBadge}><Text style={s.heroBadgeText}>SALES</Text></View></View></View>
   <Text style={s.section}>Menu Utama</Text>
@@ -38,7 +38,7 @@ export default function HomeScreen(){
 }
 const s=StyleSheet.create({
  page:{flex:1,backgroundColor:"#F6F6F7"},content:{padding:20,paddingTop:25,paddingBottom:35},
- top:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},eyebrow:{fontSize:10,fontWeight:"900",letterSpacing:1.8,color:"#E60012"},greeting:{fontSize:27,fontWeight:"900",fontStyle:"italic",color:"#1F1F25",marginTop:5},subtitle:{fontSize:12,color:"#85858F",marginTop:4},
+ top:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},brandBlock:{flex:1},brandLine:{flexDirection:"row",alignItems:"center",gap:7},brandLogo:{width:25,height:25,borderRadius:7},eyebrow:{fontSize:10,fontWeight:"900",letterSpacing:1.8,color:"#E60012"},greeting:{fontSize:27,fontWeight:"900",fontStyle:"italic",color:"#1F1F25",marginTop:5},subtitle:{fontSize:12,color:"#85858F",marginTop:4},
  avatar:{width:46,height:46,borderRadius:16,backgroundColor:"#FCE8EA",alignItems:"center",justifyContent:"center",borderWidth:2,borderColor:"#FFF"},avatarText:{fontSize:19,fontWeight:"900",color:"#E60012"},
  manage:{height:43,backgroundColor:"#E60012",borderRadius:13,marginTop:16,paddingHorizontal:13,flexDirection:"row",alignItems:"center",gap:9},manageText:{flex:1,color:"#FFF",fontSize:12,fontWeight:"800"},
  hero:{marginTop:23,backgroundColor:"#E60012",borderRadius:23,padding:21,flexDirection:"row",overflow:"hidden",minHeight:155},heroCopy:{flex:1},heroEyebrow:{fontSize:9,color:"#FFE3E5",fontWeight:"900",letterSpacing:1.4},heroTitle:{fontSize:17,color:"#FFF",fontWeight:"800",marginTop:12},heroNumber:{fontSize:38,color:"#FFF",fontWeight:"900",fontStyle:"italic",marginTop:1},heroFoot:{fontSize:10,color:"#FFE3E5",marginTop:2},heroArt:{width:92,alignItems:"center",justifyContent:"center"},heroBadge:{borderWidth:1,borderColor:"rgba(255,255,255,.45)",paddingHorizontal:10,paddingVertical:4,borderRadius:20,marginTop:5},heroBadgeText:{fontSize:9,color:"#FFF",fontWeight:"900",letterSpacing:1.4},
