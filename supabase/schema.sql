@@ -5,6 +5,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null default '',
   phone text,
+  phone text,
   role text not null default 'sales' check (role in ('sales','supervisor')),
   created_at timestamptz not null default now()
 );
@@ -128,3 +129,14 @@ using (public.is_supervisor()) with check (public.is_supervisor());
 -- Tambahkan profile sales/supervisor secara terkontrol setelah akun Auth dibuat.
 -- Untuk mengubah role jadi supervisor, lakukan dari SQL Editor oleh pemilik project:
 -- update public.profiles set role='supervisor' where id='UUID-AKUN-ADMIN';
+
+
+-- Admin can read and manage team profiles without exposing privileged Auth APIs.
+create or replace function public.is_admin()
+returns boolean language sql stable security definer set search_path=public
+as $$ select exists(select 1 from public.profiles where id=auth.uid() and role='admin' and is_active=true); $$;
+revoke all on function public.is_admin() from public;
+grant execute on function public.is_admin() to authenticated;
+drop policy if exists "admin manages profiles" on public.profiles;
+create policy "admin manages profiles" on public.profiles for all to authenticated
+using (public.is_admin()) with check (public.is_admin());
