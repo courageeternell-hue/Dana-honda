@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Alert, ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { LiquidPressable as Pressable } from "@/components/LiquidPressable";
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
