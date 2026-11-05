@@ -42,17 +42,17 @@ export default function LoginScreen() {
   </KeyboardAvoidingView>;
 }
 const s = StyleSheet.create({
-  page:{flex:1,backgroundColor:"#F7F7FB",justifyContent:"center",padding:24},
+  page:{flex:1,backgroundColor:"#F7F7F7",justifyContent:"center",padding:24},
   brand:{alignItems:"center",marginBottom:28},
-  brandMark:{width:58,height:58,borderRadius:19,backgroundColor:"#5B4BDB",color:"#FFF",textAlign:"center",textAlignVertical:"center",fontSize:30,fontWeight:"900",overflow:"hidden"},
-  brandName:{fontSize:12,fontWeight:"900",letterSpacing:2,color:"#5B4BDB",marginTop:13},
+  brandMark:{width:58,height:58,borderRadius:19,backgroundColor:"#D71920",color:"#FFF",textAlign:"center",textAlignVertical:"center",fontSize:30,fontWeight:"900",overflow:"hidden"},
+  brandName:{fontSize:12,fontWeight:"900",letterSpacing:2,color:"#D71920",marginTop:13},
   tagline:{fontSize:13,color:"#858597",marginTop:5},
-  card:{backgroundColor:"#FFF",borderRadius:24,padding:22,borderWidth:1,borderColor:"#EEEEF5"},
+  card:{backgroundColor:"#FFF",borderRadius:24,padding:22,borderWidth:1,borderColor:"#EEEEEE"},
   title:{fontSize:24,fontWeight:"800",color:"#242438"},
   subtitle:{fontSize:13,color:"#858597",lineHeight:19,marginTop:7,marginBottom:22},
   label:{fontSize:12,fontWeight:"700",color:"#45455A",marginBottom:8,marginTop:12},
-  input:{height:50,borderWidth:1,borderColor:"#E8E8F0",borderRadius:13,paddingHorizontal:14,fontSize:14,color:"#25253A",backgroundColor:"#FCFCFE"},
-  button:{height:52,borderRadius:14,backgroundColor:"#5B4BDB",alignItems:"center",justifyContent:"center",marginTop:24},
+  input:{height:50,borderWidth:1,borderColor:"#E8E8E8",borderRadius:13,paddingHorizontal:14,fontSize:14,color:"#25253A",backgroundColor:"#FCFCFC"},
+  button:{height:52,borderRadius:14,backgroundColor:"#D71920",alignItems:"center",justifyContent:"center",marginTop:24},
   buttonText:{fontSize:15,fontWeight:"800",color:"#FFF"},
   pressed:{opacity:0.88},disabled:{opacity:0.6},
   help:{fontSize:11,color:"#9292A3",textAlign:"center",lineHeight:17,marginTop:16},
