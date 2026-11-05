@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { Alert, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { LiquidPressable as Pressable } from "@/components/LiquidPressable";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { Ionicons } from "@expo/vector-icons";

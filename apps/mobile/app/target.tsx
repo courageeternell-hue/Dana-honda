@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { LiquidPressable as Pressable } from "@/components/LiquidPressable";
 import { Redirect, router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
