@@ -71,11 +71,11 @@ export default function ProfileScreen() {
     try {
       const [prospects, spks] = await Promise.all([
         supabase.from("prospects")
-          .select("prospect_date,customer_name,phone,source,unit_interest,status,deal_status,follow_up,lead_response,notes,spk_created,created_at")
+          .select("prospect_date,customer_name,phone,source,unit_interest,status,deal_status,lead_response,notes,spk_created")
           .eq("user_id", profile.id)
           .order("prospect_date", { ascending: false }),
         supabase.from("spk_records")
-          .select("spk_date,sales_name,customer_name,phone,address,source,unit_type,dp_cash,leasing,status,notes,created_at")
+          .select("spk_date,sales_name,customer_name,address,source,unit_type,dp_cash,leasing,status,notes")
           .eq("user_id", profile.id)
           .order("spk_date", { ascending: false }),
       ]);
@@ -83,34 +83,25 @@ export default function ProfileScreen() {
       if (spks.error) throw spks.error;
 
       const workbook = XLSX.utils.book_new();
-      const prospectSheet = XLSX.utils.json_to_sheet((prospects.data ?? []).map(row => ({
-        Tanggal: row.prospect_date,
-        Nama_Pelanggan: row.customer_name,
-        Nomor_HP: row.phone,
-        Sumber: row.source,
-        Minat_Motor: row.unit_interest,
-        Status: row.status,
-        Status_Deal: row.deal_status,
-        Follow_Up: row.follow_up,
-        Respon_Lead: row.lead_response,
-        Catatan: row.notes,
-        SPK_Dibuat: row.spk_created ? "Ya" : "Tidak",
-      })));
-      const spkSheet = XLSX.utils.json_to_sheet((spks.data ?? []).map(row => ({
-        Tanggal: row.spk_date,
-        Nama_Sales: row.sales_name,
-        Nama_Pelanggan: row.customer_name,
-        Nomor_HP: row.phone,
-        Alamat: row.address,
-        Sumber: row.source,
-        Tipe_Motor: row.unit_type,
-        DP_Cash: row.dp_cash,
-        Leasing: row.leasing,
-        Status: row.status,
-        Catatan: row.notes,
-      })));
-      XLSX.utils.book_append_sheet(workbook, prospectSheet, "Prospek Saya");
-      XLSX.utils.book_append_sheet(workbook, spkSheet, "SPK Saya");
+      const prospectRows = [
+        ["No", "Tanggal", "Nama Konsumen", "No Hp konsumen", "Prospek Up", "Respon", "Tertarik", "Deal", "SPK", "Keterangan"],
+        ...(prospects.data ?? []).map((row, index) => [
+          index + 1, row.prospect_date || "", row.customer_name || "", row.phone || "",
+          row.source || "", row.lead_response || row.status || "",
+          row.status === "Tertarik" ? "Ya" : "Tidak", row.deal_status || "",
+          row.spk_created ? "Ya" : "Tidak", row.notes || "",
+        ]),
+      ];
+      const spkRows = [
+        ["Tanggal", "Nama Sales", "Nama Konsumen", "Alamat Konsumen", "Sumber SPK", "Type Unit", "Harga", "Leasing/ Keterangan", "Status"],
+        ...(spks.data ?? []).map(row => [
+          row.spk_date || "", row.sales_name || profile.full_name || "", row.customer_name || "",
+          row.address || "", row.source || "", row.unit_type || "", row.dp_cash || "",
+          [row.leasing, row.notes].filter(Boolean).join(" / "), row.status || "",
+        ]),
+      ];
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(prospectRows), "Buku Prospek");
+      XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(spkRows), "Buku SPK");
       const base64 = XLSX.write(workbook, { bookType: "xlsx", type: "base64" });
       const safeName = (profile.full_name || "sales").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
       const uri = `${FileSystem.cacheDirectory}laporan-${safeName || "sales"}-${Date.now()}.xlsx`;
