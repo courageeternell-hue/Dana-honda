@@ -58,12 +58,12 @@ export default function LoginScreen() {
     </ScrollView></KeyboardAvoidingView>;
 }
 const s=StyleSheet.create({
- page:{flex:1,backgroundColor:"#F6F6F7"},
+ page:{flex:1,backgroundColor:"#F4F5F7"},
  scrollContent:{flexGrow:1},
  redHeader:{height:260,backgroundColor:"#E60012",paddingTop:58,paddingHorizontal:27,overflow:"hidden"},
  brandRow:{flexDirection:"row",alignItems:"center",gap:13},
- logo:{width:54,height:60,borderRadius:17,backgroundColor:"#FFF",alignItems:"center",justifyContent:"center",overflow:"hidden"},
- logoImage:{width:46,height:52},
+ logo:{width:54,height:60,borderRadius:18,backgroundColor:"#FFF",alignItems:"center",justifyContent:"center",overflow:"hidden"},
+ logoImage:{width:46,height:54},
  
  brandName:{fontSize:16,fontWeight:"900",fontStyle:"italic",letterSpacing:1,color:"#FFF"},
  brandSub:{fontSize:11,fontWeight:"700",letterSpacing:1.5,color:"#FFE4E6",marginTop:4},
