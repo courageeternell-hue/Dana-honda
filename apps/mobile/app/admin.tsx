@@ -34,7 +34,6 @@ export default function AdminDashboard() {
   const [savingUser, setSavingUser] = useState(false);
   const [supervisorProspects, setSupervisorProspects] = useState<any[]>([]);
   const [supervisorSpks, setSupervisorSpks] = useState<any[]>([]);
-  const [activityLogs, setActivityLogs] = useState<any[]>([]);
   const [reportPeriod, setReportPeriod] = useState<"daily" | "weekly" | "monthly">("monthly");
   const [salesFilter, setSalesFilter] = useState("all");
   const [correctionTarget, setCorrectionTarget] = useState<{id:string; table:"prospects"|"spk_records"; label:string}|null>(null);
@@ -157,17 +156,14 @@ export default function AdminDashboard() {
   const loadSupervisorData = useCallback(async () => {
     if (profile?.role !== "supervisor" && profile?.role !== "admin") return;
     try {
-      const [p, s, logs] = await Promise.all([
+      const [p, s] = await Promise.all([
         supabase.from("prospects").select("id,user_id,prospect_date,customer_name,phone,source,status,deal_status,follow_up,notes,updated_at,spk_created").order("prospect_date", { ascending: false }).limit(1000),
         supabase.from("spk_records").select("id,user_id,spk_date,sales_name,customer_name,phone,address,source,unit_type,status,notes,updated_at").order("spk_date", { ascending: false }).limit(1000),
-        supabase.from("activity_logs").select("id,table_name,record_id,actor_id,action,old_data,new_data,created_at").order("created_at", { ascending: false }).limit(100),
       ]);
       if (p.error) throw p.error;
       if (s.error) throw s.error;
-      if (logs.error) throw logs.error;
       setSupervisorProspects(p.data ?? []);
       setSupervisorSpks(s.data ?? []);
-      setActivityLogs(logs.data ?? []);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Gagal memuat pengawasan data.");
     }
@@ -332,12 +328,6 @@ export default function AdminDashboard() {
         <View style={s.choices}>{(["daily","weekly","monthly"] as const).map(v=><Pressable key={v} onPress={()=>setReportPeriod(v)} style={[s.choice,reportPeriod===v&&s.choiceActive]}><Text style={[s.choiceText,reportPeriod===v&&s.choiceTextActive]}>{v==="daily"?"Harian":v==="weekly"?"Mingguan":"Bulanan"}</Text></Pressable>)}</View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{marginTop:10}}><View style={s.choices}><Pressable onPress={()=>setSalesFilter("all")} style={[s.choice,salesFilter==="all"&&s.choiceActive]}><Text style={s.choiceText}>Semua Sales</Text></Pressable>{members.filter(m=>m.role==="sales").map(m=><Pressable key={m.id} onPress={()=>setSalesFilter(m.id)} style={[s.choice,salesFilter===m.id&&s.choiceActive]}><Text style={s.choiceText}>{m.full_name}</Text></Pressable>)}</View></ScrollView>
         <View style={s.memberCard}><Text style={s.memberStat}>Periode {periodRange.start} s.d. {new Date(new Date(periodRange.end + "T00:00:00").getTime() - 86400000).toISOString().slice(0, 10)}</Text><Text style={s.memberName}>{filteredProspects.length} Prospek • {filteredSpks.length} SPK</Text><Text style={s.memberEmail}>Filter: {salesFilter==="all"?"Semua sales":memberName(salesFilter)}</Text><View style={s.actionRow}><Pressable style={s.exportButton} onPress={()=>void exportSupervisorReport("prospects")}><Text style={s.exportText}>Excel Prospek Tim</Text></Pressable><Pressable style={s.exportButton} onPress={()=>void exportSupervisorReport("spk")}><Text style={s.exportText}>Excel SPK Tim</Text></Pressable></View></View>
-        <Text style={s.section}>Pemantauan Status Calon Konsumen</Text>
-        {pendingProspects.slice(0,15).map(p=><View key={p.id} style={s.memberCard}><Text style={s.memberName}>{p.customer_name}</Text><Text style={s.memberEmail}>{memberName(p.user_id)} • {p.prospect_date}</Text><Text style={s.memberEmail}>Status: {p.status||"Belum Respon"} • Deal: {p.deal_status||"Belum"}</Text><Pressable onPress={()=>{setCorrectionTarget({id:p.id,table:"prospects",label:p.customer_name});setCorrectionNote("");}} style={s.manageButton}><Text style={s.manageText}>Beri catatan</Text></Pressable></View>)}
-        <Text style={s.section}>Pengawasan Data SPK</Text>
-        {supervisorSpks.slice(0,10).map(p=><View key={p.id} style={s.memberCard}><Text style={s.memberName}>{p.customer_name} • {p.unit_type}</Text><Text style={s.memberEmail}>{p.sales_name||memberName(p.user_id)} • {p.spk_date} • {p.status}</Text><Pressable onPress={()=>{setCorrectionTarget({id:p.id,table:"spk_records",label:p.customer_name});setCorrectionNote("");}} style={s.manageButton}><Text style={s.manageText}>Beri catatan</Text></Pressable></View>)}
-        <Text style={s.section}>Riwayat Perubahan Data</Text>
-        {activityLogs.slice(0,20).map(log=><View key={log.id} style={s.memberCard}><Text style={s.memberName}>{log.action} • {log.table_name}</Text><Text style={s.memberEmail}>Aktor: {memberName(log.actor_id)} • {new Date(log.created_at).toLocaleString("id-ID")}</Text></View>)}
         <Modal visible={!!correctionTarget} transparent animationType="slide" onRequestClose={()=>setCorrectionTarget(null)}><View style={s.overlay}><View style={s.sheet}><Text style={s.sheetTitle}>Catatan pengawasan</Text><Text style={s.memberEmail}>{correctionTarget?.label}</Text><TextInput multiline value={correctionNote} onChangeText={setCorrectionNote} placeholder="Tulis catatan atau koreksi untuk sales..." style={[s.input,{height:110,textAlignVertical:"top",paddingTop:12}]} /><Pressable disabled={savingCorrection||!correctionNote.trim()} onPress={()=>void saveCorrection()} style={s.save}>{savingCorrection?<ActivityIndicator color="#FFF"/>:<Text style={s.saveText}>Simpan catatan</Text>}</Pressable><Pressable onPress={()=>setCorrectionTarget(null)} style={s.cancel}><Text style={s.cancelText}>Batal</Text></Pressable></View></View></Modal>
       </>}
 
@@ -370,14 +360,14 @@ export default function AdminDashboard() {
 }
 
 const s = StyleSheet.create({
-  page:{flex:1,backgroundColor:"#F7F7F7"},content:{padding:24,paddingTop:26,paddingBottom:35},back:{fontSize:14,color:"#D71920",fontWeight:"700",marginBottom:20},
+  page:{flex:1,backgroundColor:"#F7F7F7"},content:{padding:20,paddingTop:22,paddingBottom:32},back:{fontSize:14,color:"#D71920",fontWeight:"700",marginBottom:20},
   headerRow:{flexDirection:"row",alignItems:"center",marginBottom:22},title:{fontSize:26,fontWeight:"800",color:"#202033"},subtitle:{fontSize:14,color:"#858597",marginTop:5},
   loading:{padding:30,alignItems:"center",gap:11},muted:{fontSize:14,color:"#9292A3"},error:{fontSize:14,color:"#B74747",marginVertical:12},
   summary:{backgroundColor:"#D71920",borderRadius:20,padding:22},summaryLabel:{color:"#FFE3E3",fontSize:12,fontWeight:"800",letterSpacing:1},
-  summaryGrid:{flexDirection:"row",justifyContent:"space-between",marginTop:16},summaryItem:{alignItems:"center",flex:1},summaryValue:{fontSize:28,fontWeight:"900",color:"#FFF"},summaryText:{fontSize:13,color:"#FFE3E3",marginTop:3},
+  summaryGrid:{flexDirection:"row",justifyContent:"space-between",marginTop:12},summaryItem:{alignItems:"center",flex:1},summaryValue:{fontSize:28,fontWeight:"900",color:"#FFF"},summaryText:{fontSize:13,color:"#FFE3E3",marginTop:3},
   addUserButton:{width:"100%",minHeight:82,backgroundColor:"#D71920",borderRadius:16,borderWidth:1,borderColor:"#B9151C",paddingHorizontal:18,paddingVertical:14,marginBottom:18,flexDirection:"row",alignItems:"center",gap:14,elevation:3,shadowColor:"#000",shadowOpacity:0.12,shadowRadius:6,shadowOffset:{width:0,height:3}},addUserIcon:{width:46,height:46,borderRadius:13,backgroundColor:"rgba(255,255,255,0.18)",alignItems:"center",justifyContent:"center"},addUserPlus:{fontSize:30,lineHeight:34,color:"#FFF",fontWeight:"500"},addUserTitle:{fontSize:17,fontWeight:"900",color:"#FFF"},addUserSubtitle:{fontSize:12,color:"#FFE6E6",marginTop:4},addUserArrow:{fontSize:30,color:"#FFF",fontWeight:"700"},\n  actionRow:{flexDirection:"row",gap:11,marginTop:20,flexWrap:"wrap"},primaryButton:{backgroundColor:"#D71920",paddingHorizontal:20,paddingVertical:14,borderRadius:12},primaryText:{fontSize:14,color:"#FFF",fontWeight:"800"},
   exportButton:{backgroundColor:"#FFF",borderWidth:1,borderColor:"#D71920",paddingHorizontal:20,paddingVertical:14,borderRadius:12},exportText:{fontSize:14,color:"#D71920",fontWeight:"800"},
-  section:{fontSize:17,fontWeight:"800",color:"#242438",marginTop:25,marginBottom:12},memberCard:{backgroundColor:"#FFF",padding:18,borderRadius:16,borderWidth:1,borderColor:"#EEEEEE",marginBottom:10},
+  section:{fontSize:17,fontWeight:"800",color:"#242438",marginTop:20,marginBottom:10},memberCard:{backgroundColor:"#FFF",padding:18,borderRadius:16,borderWidth:1,borderColor:"#EEEEEE",marginBottom:10},
   memberTop:{flexDirection:"row",alignItems:"center",gap:11},memberActions:{alignItems:"flex-end",gap:8},manageButton:{minHeight:44,minWidth:76,paddingHorizontal:14,alignItems:"center",justifyContent:"center",backgroundColor:"#FCE8E8",borderRadius:9,borderWidth:1,borderColor:"#D71920"},manageText:{fontSize:13,color:"#D71920",fontWeight:"900"},memberStatusText:{fontSize:12,color:"#D71920",fontWeight:"800"},memberName:{fontSize:15,fontWeight:"800",color:"#29293D"},memberEmail:{fontSize:13,color:"#858597",marginTop:3},memberRole:{fontSize:12,color:"#D71920",fontWeight:"800",marginTop:5},
   active:{backgroundColor:"#FCE8E8",paddingHorizontal:12,paddingVertical:9,borderRadius:9},inactive:{backgroundColor:"#F5F5F5"},memberStats:{flexDirection:"row",gap:19,marginTop:14,borderTopWidth:1,borderTopColor:"#F0F0F0",paddingTop:12},
   memberStat:{fontSize:13,color:"#77778A"},statNumber:{fontWeight:"900",color:"#25253A"},notice:{backgroundColor:"#FFF",borderRadius:14,padding:17,marginTop:18,borderWidth:1,borderColor:"#EEEEEE"},noticeTitle:{fontSize:14,fontWeight:"800",color:"#29293D"},noticeText:{fontSize:13,color:"#858597",lineHeight:19,marginTop:5},
