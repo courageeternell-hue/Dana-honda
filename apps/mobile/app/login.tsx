@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { AppAlert as Alert } from "@/components/AppAlert";
 import { LiquidPressable as Pressable } from "@/components/LiquidPressable";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
