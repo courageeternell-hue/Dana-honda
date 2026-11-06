@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Modal, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import DateTimePicker from "@react-native-community/datetimepicker";
 import { AppAlert as Alert } from "@/components/AppAlert";
 import { LiquidPressable as Pressable } from "@/components/LiquidPressable";
 import * as FileSystem from "expo-file-system/legacy";
@@ -24,7 +25,6 @@ export default function ProspekScreen() {
   const [search,setSearch]=useState("");
   const [statusFilter,setStatusFilter]=useState("Semua");
   const [calendarOpen,setCalendarOpen]=useState(false);
-  const [calendarMonth,setCalendarMonth]=useState(()=>new Date(new Date().getFullYear(),new Date().getMonth(),1));
 
   const load=useCallback(async()=>{
     const {data,error}=await supabase.from("prospects").select("id,user_id,customer_name,phone,unit_interest,source,address,status,deal_status,notes,follow_up,created_at").order("created_at",{ascending:false});
@@ -35,16 +35,12 @@ export default function ProspekScreen() {
 
   function openNew(){setEditing(null);setDraft(blank);setModal(true);}
   function openEdit(item:Prospect){setEditing(item.id);setDraft({customer_name:item.customer_name,phone:item.phone,unit_interest:item.unit_interest??"",source:item.source??"",address:item.address??"",status:item.status,notes:item.notes??"",follow_up:item.follow_up??""});setModal(true);}
-  const monthNames=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
   const selectedFollowUpDate=/^\\d{4}-\\d{2}-\\d{2}$/.test(draft.follow_up)?new Date(Number(draft.follow_up.slice(0,4)),Number(draft.follow_up.slice(5,7))-1,Number(draft.follow_up.slice(8,10))):null;
-  function openFollowUpCalendar(){
-    const selected=/^\\d{4}-\\d{2}-\\d{2}$/.test(draft.follow_up)?new Date(Number(draft.follow_up.slice(0,4)),Number(draft.follow_up.slice(5,7))-1,1):new Date(new Date().getFullYear(),new Date().getMonth(),1);
-    setCalendarMonth(selected);setCalendarOpen(true);
-  }
-  function changeCalendarMonth(offset:number){setCalendarMonth(current=>new Date(current.getFullYear(),current.getMonth()+offset,1));}
-  function chooseFollowUpDay(day:number){
-    const y=calendarMonth.getFullYear(),m=String(calendarMonth.getMonth()+1).padStart(2,"0"),d=String(day).padStart(2,"0");
-    setDraft(current=>({...current,follow_up:`${y}-${m}-${d}`}));setCalendarOpen(false);
+  function openFollowUpCalendar(){setCalendarOpen(true);}
+  function setFollowUpDate(date:Date){
+    const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,"0"),d=String(date.getDate()).padStart(2,"0");
+    setDraft(current=>({...current,follow_up:`${y}-${m}-${d}`}));
+    setCalendarOpen(false);
   }
   async function save(){
     if(!profile) return;
@@ -122,28 +118,19 @@ export default function ProspekScreen() {
             <Text style={[s.dateButtonText,!draft.follow_up&&s.datePlaceholder]}>{selectedFollowUpDate?selectedFollowUpDate.toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"}):"Pilih tanggal, bulan, dan tahun"}</Text>
             <Text style={s.calendarIcon}>▦</Text>
           </Pressable>
-          {calendarOpen&&<View style={s.calendarPanel}>
-            <View style={s.calendarHeader}>
-              <Pressable accessibilityLabel="Bulan sebelumnya" onPress={()=>changeCalendarMonth(-1)} style={s.calendarArrow}><Text style={s.calendarArrowText}>‹</Text></Pressable>
-              <Text style={s.calendarMonthTitle}>{monthNames[calendarMonth.getMonth()]} {calendarMonth.getFullYear()}</Text>
-              <Pressable accessibilityLabel="Bulan berikutnya" onPress={()=>changeCalendarMonth(1)} style={s.calendarArrow}><Text style={s.calendarArrowText}>›</Text></Pressable>
-            </View>
-            <View style={s.calendarGrid}>{["Min","Sen","Sel","Rab","Kam","Jum","Sab"].map(day=><Text key={day} style={s.calendarWeekday}>{day}</Text>)}
-              {Array.from({length:new Date(calendarMonth.getFullYear(),calendarMonth.getMonth(),1).getDay()},(_,i)=><View key={"blank-"+i} style={s.calendarDay}/>)}
-              {Array.from({length:new Date(calendarMonth.getFullYear(),calendarMonth.getMonth()+1,0).getDate()},(_,i)=>i+1).map(day=>{
-                const isSelected=!!selectedFollowUpDate&&selectedFollowUpDate.getFullYear()===calendarMonth.getFullYear()&&selectedFollowUpDate.getMonth()===calendarMonth.getMonth()&&selectedFollowUpDate.getDate()===day;
-                const today=new Date();const isToday=today.getFullYear()===calendarMonth.getFullYear()&&today.getMonth()===calendarMonth.getMonth()&&today.getDate()===day;
-                return <Pressable key={day} accessibilityRole="button" accessibilityLabel={day+" "+monthNames[calendarMonth.getMonth()]+" "+calendarMonth.getFullYear()} onPress={()=>chooseFollowUpDay(day)} style={[s.calendarDay,s.calendarDayButton,isSelected&&s.calendarDaySelected,isToday&&!isSelected&&s.calendarDayToday]}><Text style={[s.calendarDayText,isSelected&&s.calendarDaySelectedText]}>{day}</Text></Pressable>;
-              })}
-            </View>
-            <View style={s.calendarFooter}>
-              <Pressable onPress={()=>{const now=new Date();const y=now.getFullYear(),m=String(now.getMonth()+1).padStart(2,"0"),d=String(now.getDate()).padStart(2,"0");setCalendarMonth(new Date(y,now.getMonth(),1));setDraft(current=>({...current,follow_up:`${y}-${m}-${d}`}));setCalendarOpen(false);}}><Text style={s.calendarAction}>Hari ini</Text></Pressable>
-              <View style={{flexDirection:"row",gap:16}}>
-                {!!draft.follow_up&&<Pressable onPress={()=>{setDraft(current=>({...current,follow_up:""}));setCalendarOpen(false);}}><Text style={s.calendarClear}>Hapus tanggal</Text></Pressable>}
-                <Pressable onPress={()=>setCalendarOpen(false)}><Text style={s.calendarAction}>Tutup</Text></Pressable>
-              </View>
-            </View>
-          </View>}
+          {calendarOpen&&<DateTimePicker
+            value={selectedFollowUpDate??new Date()}
+            mode="date"
+            display="calendar"
+            onChange={(event,date)=>{
+              setCalendarOpen(false);
+              if(event.type==="set"&&date)setFollowUpDate(date);
+            }}
+          />}
+          <View style={s.calendarFooter}>
+            <Pressable onPress={()=>setFollowUpDate(new Date())}><Text style={s.calendarAction}>Hari ini</Text></Pressable>
+            {!!draft.follow_up&&<Pressable onPress={()=>setDraft(current=>({...current,follow_up:""}))}><Text style={s.calendarClear}>Hapus tanggal</Text></Pressable>}
+          </View>
         </View>
         <View style={s.field}><Text style={s.label}>Status</Text><View style={s.statusChoices}>{["Belum Respon","Follow Up","Tertarik","Tidak Tertarik"].map(v=><Pressable key={v} onPress={()=>setDraft(p=>({...p,status:v}))} style={[s.choice,draft.status===v&&s.choiceActive]}><Text style={[s.choiceText,draft.status===v&&s.choiceTextActive]}>{v}</Text></Pressable>)}</View></View>
         {field("notes","Catatan tambahan",true)}
@@ -157,5 +144,5 @@ const s=StyleSheet.create({
  page:{flex:1,backgroundColor:"#F4F5F7",paddingHorizontal:20,paddingTop:26,paddingBottom:28},searchInput:{height:54,backgroundColor:"#FFF",borderWidth:1,borderColor:"#E8E8E8",borderRadius:14,paddingHorizontal:15,color:"#25253A",fontSize:14,marginBottom:10},filterRow:{gap:10,paddingBottom:16},filterChip:{paddingHorizontal:14,paddingVertical:10,borderRadius:10,backgroundColor:"#FFF",borderWidth:1,borderColor:"#E8E8E8"},filterChipActive:{backgroundColor:"#FFF0F1",borderColor:"#E60012"},filterText:{fontSize:12,color:"#77778A"},filterTextActive:{color:"#E60012",fontWeight:"800"},followUp:{fontSize:13,color:"#E60012",fontWeight:"700",marginTop:8},header:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:22},title:{fontSize:29,fontWeight:"900",fontStyle:"italic",color:"#222229"},subtitle:{fontSize:14,color:"#858597",marginTop:4},headerActions:{flexDirection:"row",alignItems:"center",gap:10},excelBtn:{minHeight:48,backgroundColor:"#FFF",borderWidth:1,borderColor:"#E60012",paddingHorizontal:14,paddingVertical:12,borderRadius:14,alignItems:"center",justifyContent:"center"},excelText:{color:"#E60012",fontSize:13,fontWeight:"900"},add:{minHeight:48,backgroundColor:"#E60012",paddingHorizontal:18,paddingVertical:13,borderRadius:14,alignItems:"center",justifyContent:"center"},addText:{color:"#FFF",fontSize:14,fontWeight:"800"},
  center:{flex:1,alignItems:"center",justifyContent:"center",gap:11},muted:{fontSize:14,color:"#9292A3"},empty:{backgroundColor:"#FFF",padding:24,borderRadius:20,alignItems:"center",marginTop:20},emptyTitle:{fontSize:16,fontWeight:"800",color:"#29293D",marginBottom:6},
  card:{backgroundColor:"#FFF",padding:20,borderRadius:20,marginBottom:16,borderWidth:1,borderColor:"#E8EAF0",shadowColor:"#172033",shadowOpacity:0.045,shadowRadius:11,shadowOffset:{width:0,height:4},elevation:2},cardTop:{flexDirection:"row",alignItems:"flex-start",gap:9},customer:{fontSize:16,fontWeight:"800",color:"#29293D"},phone:{fontSize:14,color:"#858597",marginTop:4},status:{fontSize:12,color:"#E60012",backgroundColor:"#FFF0F1",paddingHorizontal:11,paddingVertical:8,borderRadius:9,overflow:"hidden",fontWeight:"800"},statusNew:{color:"#2876C7",backgroundColor:"#EAF3FF"},statusProcess:{color:"#C87917",backgroundColor:"#FFF3E2"},statusDeal:{color:"#168653",backgroundColor:"#E8F7EF"},detail:{fontSize:14,color:"#66667A",marginTop:11,lineHeight:20},actions:{flexDirection:"row",gap:18,marginTop:16,borderTopWidth:1,borderTopColor:"#F0F0F0",paddingTop:14},edit:{fontSize:14,fontWeight:"800",color:"#E60012"},delete:{fontSize:14,fontWeight:"800",color:"#C44545"},error:{color:"#B74747",fontSize:14,marginVertical:12},
- overlay:{flex:1,backgroundColor:"rgba(20,20,35,.42)",justifyContent:"flex-end"},sheet:{maxHeight:"92%",backgroundColor:"#FFF",borderTopLeftRadius:24,borderTopRightRadius:24,padding:24,paddingBottom:30},sheetTitle:{fontSize:21,fontWeight:"800",color:"#25252B",marginBottom:12},field:{marginTop:16},dateButton:{minHeight:54,borderWidth:1,borderColor:"#E5E5EA",borderRadius:14,paddingHorizontal:15,flexDirection:"row",alignItems:"center",justifyContent:"space-between",backgroundColor:"#FFF"},dateButtonText:{fontSize:14,color:"#29293D",fontWeight:"600"},datePlaceholder:{color:"#A1A1B0",fontWeight:"400"},calendarIcon:{fontSize:21,color:"#E60012"},calendarPanel:{marginTop:9,padding:14,borderRadius:15,borderWidth:1,borderColor:"#E9E9EE",backgroundColor:"#FBFBFC"},calendarHeader:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:12},calendarArrow:{width:36,height:42,borderRadius:10,backgroundColor:"#FFF0F1",alignItems:"center",justifyContent:"center"},calendarArrowText:{fontSize:26,color:"#E60012",lineHeight:30},calendarMonthTitle:{fontSize:15,fontWeight:"800",color:"#29293D"},calendarGrid:{flexDirection:"row",flexWrap:"wrap"},calendarWeekday:{width:"14.2857%",textAlign:"center",fontSize:12,fontWeight:"800",color:"#888899",paddingVertical:10},calendarDay:{width:"14.2857%",height:46,alignItems:"center",justifyContent:"center"},calendarDayButton:{borderRadius:10},calendarDaySelected:{backgroundColor:"#E60012"},calendarDayToday:{borderWidth:1,borderColor:"#E60012"},calendarDayText:{fontSize:14,color:"#333344"},calendarDaySelectedText:{color:"#FFF",fontWeight:"900"},calendarFooter:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginTop:10,paddingTop:10,borderTopWidth:1,borderTopColor:"#ECECF0"},calendarAction:{fontSize:14,fontWeight:"800",color:"#E60012"},calendarClear:{fontSize:14,fontWeight:"700",color:"#77778A"},sourcePanel:{padding:14,borderRadius:13,borderWidth:1,borderColor:"#E8E8ED",backgroundColor:"#FAFAFB"},sourceHint:{fontSize:13,color:"#858597",marginBottom:10},sourceChoices:{flexDirection:"row",flexWrap:"wrap",gap:9},sourceChoice:{paddingHorizontal:14,paddingVertical:11,borderRadius:10},sourceInput:{height:49,borderWidth:1,borderColor:"#E8E8ED",borderRadius:10,paddingHorizontal:13,color:"#25253A",fontSize:14,marginTop:10,backgroundColor:"#FFF"},label:{fontSize:14,fontWeight:"700",color:"#45455A",marginBottom:8},input:{height:54,borderWidth:1,borderColor:"#E8E8E8",borderRadius:14,paddingHorizontal:15,color:"#25253A",fontSize:14},multiline:{height:80,textAlignVertical:"top",paddingTop:12},statusChoices:{flexDirection:"row",flexWrap:"wrap",gap:8},choice:{paddingHorizontal:12,paddingVertical:10,borderRadius:9,borderWidth:1,borderColor:"#E8E8E8"},choiceActive:{backgroundColor:"#FFF0F1",borderColor:"#E60012"},choiceText:{fontSize:12,color:"#77778A"},choiceTextActive:{color:"#E60012",fontWeight:"800"},save:{height:56,backgroundColor:"#E60012",borderRadius:14,alignItems:"center",justifyContent:"center",marginTop:26},saveText:{fontSize:15,color:"#FFF",fontWeight:"800"},cancel:{padding:16,alignItems:"center"},cancelText:{fontSize:14,color:"#77778A",fontWeight:"700"}
+ overlay:{flex:1,backgroundColor:"rgba(20,20,35,.42)",justifyContent:"flex-end"},sheet:{maxHeight:"92%",backgroundColor:"#FFF",borderTopLeftRadius:24,borderTopRightRadius:24,padding:24,paddingBottom:30},sheetTitle:{fontSize:21,fontWeight:"800",color:"#25252B",marginBottom:12},field:{marginTop:16},dateButton:{minHeight:54,borderWidth:1,borderColor:"#E5E5EA",borderRadius:14,paddingHorizontal:15,flexDirection:"row",alignItems:"center",justifyContent:"space-between",backgroundColor:"#FFF"},calendarFooter:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",paddingHorizontal:3,paddingTop:12},dateButtonText:{fontSize:14,color:"#29293D",fontWeight:"600"},datePlaceholder:{color:"#A1A1B0",fontWeight:"400"},calendarIcon:{fontSize:21,color:"#E60012"},sourcePanel:{padding:14,borderRadius:13,borderWidth:1,borderColor:"#E8E8ED",backgroundColor:"#FAFAFB"},sourceHint:{fontSize:13,color:"#858597",marginBottom:10},sourceChoices:{flexDirection:"row",flexWrap:"wrap",gap:9},sourceChoice:{paddingHorizontal:14,paddingVertical:11,borderRadius:10},sourceInput:{height:49,borderWidth:1,borderColor:"#E8E8ED",borderRadius:10,paddingHorizontal:13,color:"#25253A",fontSize:14,marginTop:10,backgroundColor:"#FFF"},label:{fontSize:14,fontWeight:"700",color:"#45455A",marginBottom:8},input:{height:54,borderWidth:1,borderColor:"#E8E8E8",borderRadius:14,paddingHorizontal:15,color:"#25253A",fontSize:14},multiline:{height:80,textAlignVertical:"top",paddingTop:12},statusChoices:{flexDirection:"row",flexWrap:"wrap",gap:8},choice:{paddingHorizontal:12,paddingVertical:10,borderRadius:9,borderWidth:1,borderColor:"#E8E8E8"},choiceActive:{backgroundColor:"#FFF0F1",borderColor:"#E60012"},choiceText:{fontSize:12,color:"#77778A"},choiceTextActive:{color:"#E60012",fontWeight:"800"},save:{height:56,backgroundColor:"#E60012",borderRadius:14,alignItems:"center",justifyContent:"center",marginTop:26},saveText:{fontSize:15,color:"#FFF",fontWeight:"800"},cancel:{padding:16,alignItems:"center"},cancelText:{fontSize:14,color:"#77778A",fontWeight:"700"}
 });
