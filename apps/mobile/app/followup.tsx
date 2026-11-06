@@ -224,8 +224,8 @@ export default function FollowUp() {
                 const date = parseDate(item.follow_up);
                 setCalendarMonth(new Date(date.getFullYear(), date.getMonth(), 1));
                 setSelectedDate(item.follow_up.slice(0, 10));
+              }
             }}
-            }
           >
             <View style={s.compactDate}>
               <Text style={s.compactDay}>{item.follow_up ? parseDate(item.follow_up).getDate() : "—"}</Text>
