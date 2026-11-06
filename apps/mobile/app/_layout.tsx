@@ -1,9 +1,9 @@
 import { useEffect } from "react";
-import { Alert } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as Updates from "expo-updates";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { AppAlert, AppAlertProvider } from "@/components/AppAlert";
 
 function UpdateManager() {
   useEffect(() => {
@@ -16,7 +16,7 @@ function UpdateManager() {
         const update = await Updates.checkForUpdateAsync();
         if (!active || !update.isAvailable) return;
 
-        Alert.alert(
+        AppAlert.alert(
           "Pembaruan tersedia",
           "Versi terbaru Asisten Sales sudah tersedia. Perbarui sekarang untuk menggunakan fitur dan perbaikan terbaru.",
           [
@@ -49,10 +49,12 @@ function UpdateManager() {
 
 export default function RootLayout() {
   return (
+    <AppAlertProvider>
     <AuthProvider>
       <UpdateManager />
       <StatusBar style="dark" />
       <Stack screenOptions={{ headerShown: false }} />
     </AuthProvider>
+    </AppAlertProvider>
   );
 }
