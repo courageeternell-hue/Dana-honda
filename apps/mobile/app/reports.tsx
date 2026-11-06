@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { AppAlert as Alert } from "@/components/AppAlert";
 import { LiquidPressable as Pressable } from "@/components/LiquidPressable";
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system/legacy";
