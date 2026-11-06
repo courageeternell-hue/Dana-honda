@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, Modal, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { LiquidPressable as Pressable } from "@/components/LiquidPressable";
 import { Redirect, router } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";
@@ -308,7 +308,7 @@ export default function AdminDashboard() {
   return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void Promise.all([load(), loadSupervisorData()]); }} tintColor="#D71920" />}>
     <Pressable onPress={() => router.back()}><Text style={s.back}>‹ Kembali ke Profil</Text></Pressable>
     <View style={s.headerRow}><View style={{ flex: 1 }}><Text style={s.title}>Dasbor {profile.role === "admin" ? "Admin" : "Supervisor"}</Text><Text style={s.subtitle}>Performa tim dan manajemen pengguna.</Text></View></View>
-    {(profile.role === "admin" || profile.role === "supervisor") && <Pressable style={s.addUserButton} onPress={openUserModal} accessibilityRole="button" accessibilityLabel="Tambah pengguna baru"><View style={s.addUserIcon}><Text style={s.addUserPlus}>＋</Text></View><View style={{flex:1}}><Text style={s.addUserTitle}>Tambah Pengguna</Text><Text style={s.addUserSubtitle}>{profile.role === "admin" ? "Buat akun Sales atau Supervisor" : "Buat akun Sales baru"}</Text></View><Text style={s.addUserArrow}>›</Text></Pressable>}
+    {(profile.role === "admin" || profile.role === "supervisor") && <Pressable glass={false} style={s.addUserButton} onPress={openUserModal} accessibilityRole="button" accessibilityLabel="Tambah pengguna baru"><View style={s.addUserIcon}><Text style={s.addUserPlus}>＋</Text></View><View style={{flex:1}}><Text style={s.addUserTitle}>Tambah Pengguna</Text><Text style={s.addUserSubtitle}>{profile.role === "admin" ? "Buat akun Sales atau Supervisor" : "Buat akun Sales baru"}</Text></View><Text style={s.addUserArrow}>›</Text></Pressable>}
     {loading ? <View style={s.loading}><ActivityIndicator color="#D71920" /><Text style={s.muted}>Memuat data tim...</Text></View> : <>
       <View style={s.summary}><Text style={s.summaryLabel}>TOTAL AKTIVITAS TIM</Text><View style={s.summaryGrid}>
         <View style={s.summaryItem}><Text style={s.summaryValue}>{totals.prospects}</Text><Text style={s.summaryText}>Prospek</Text></View>
@@ -354,17 +354,17 @@ export default function AdminDashboard() {
       {members.length === 0 && <Text style={s.muted}>Belum ada anggota tim.</Text>}
     </>}
     <View style={s.notice}><Text style={s.noticeTitle}>Akses pengguna</Text><Text style={s.noticeText}>Admin dapat membuat akun Sales dan Supervisor serta mengubah role. Supervisor dapat membuat akun Sales. Admin dan Supervisor dapat mengaktifkan atau menonaktifkan akun.</Text></View>
-    <Modal visible={userModal} animationType="slide" transparent onRequestClose={() => setUserModal(false)}>
-      <View style={s.overlay}><View style={s.sheet}><ScrollView keyboardShouldPersistTaps="handled">
+    <Modal visible={userModal} animationType="fade" transparent statusBarTranslucent onRequestClose={() => setUserModal(false)}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={s.overlay}><View style={s.sheet}><ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <Text style={s.sheetTitle}>Tambah pengguna</Text>
         <Text style={s.label}>Nama lengkap</Text><TextInput value={draftUser.full_name} onChangeText={(v) => setDraftUser(p => ({ ...p, full_name: v }))} placeholder="Nama sales" placeholderTextColor="#A1A1B0" style={s.input} />
         <Text style={s.label}>Email login</Text><TextInput value={draftUser.email} onChangeText={(v) => setDraftUser(p => ({ ...p, email: v }))} autoCapitalize="none" keyboardType="email-address" placeholder="nama@email.com" placeholderTextColor="#A1A1B0" style={s.input} />
         <Text style={s.label}>Nomor HP</Text><TextInput value={draftUser.phone} onChangeText={(v) => setDraftUser(p => ({ ...p, phone: v }))} keyboardType="phone-pad" placeholder="08xxxxxxxxxx" placeholderTextColor="#A1A1B0" style={s.input} />
         <Text style={s.label}>Password awal</Text><TextInput value={draftUser.password} onChangeText={(v) => setDraftUser(p => ({ ...p, password: v }))} secureTextEntry placeholder="Minimal 8 karakter" placeholderTextColor="#A1A1B0" style={s.input} />
         <Text style={s.label}>Role</Text><View style={s.choices}>{(profile.role === "admin" ? (["sales","supervisor"] as const) : (["sales"] as const)).map(role => <Pressable key={role} onPress={() => setDraftUser(p => ({ ...p, role }))} style={[s.choice, draftUser.role === role && s.choiceActive]}><Text style={[s.choiceText, draftUser.role === role && s.choiceTextActive]}>{role === "sales" ? "Sales" : "Supervisor"}</Text></Pressable>)}</View>
-        <Pressable disabled={savingUser} onPress={createUser} style={[s.save, savingUser && { opacity: .6 }]}>{savingUser ? <ActivityIndicator color="#FFF" /> : <Text style={s.saveText}>Buat akun</Text>}</Pressable>
-        <Pressable onPress={() => setUserModal(false)} style={s.cancel}><Text style={s.cancelText}>Batal</Text></Pressable>
-      </ScrollView></View></View>
+        <Pressable glass={false} disabled={savingUser} onPress={createUser} style={[s.save, savingUser && { opacity: .6 }]}>{savingUser ? <ActivityIndicator color="#FFF" /> : <Text style={s.saveText}>Buat akun</Text>}</Pressable>
+        <Pressable glass={false} onPress={() => setUserModal(false)} style={s.cancel}><Text style={s.cancelText}>Batal</Text></Pressable>
+      </ScrollView></View></KeyboardAvoidingView>
     </Modal>
   </ScrollView>;
 }
@@ -381,8 +381,8 @@ const s = StyleSheet.create({
   memberTop:{flexDirection:"row",alignItems:"center",gap:11},memberActions:{alignItems:"flex-end",gap:8},manageButton:{minHeight:44,minWidth:76,paddingHorizontal:14,alignItems:"center",justifyContent:"center",backgroundColor:"#FCE8E8",borderRadius:9,borderWidth:1,borderColor:"#D71920"},manageText:{fontSize:13,color:"#D71920",fontWeight:"900"},memberStatusText:{fontSize:12,color:"#D71920",fontWeight:"800"},memberName:{fontSize:15,fontWeight:"800",color:"#29293D"},memberEmail:{fontSize:13,color:"#858597",marginTop:3},memberRole:{fontSize:12,color:"#D71920",fontWeight:"800",marginTop:5},
   active:{backgroundColor:"#FCE8E8",paddingHorizontal:12,paddingVertical:9,borderRadius:9},inactive:{backgroundColor:"#F5F5F5"},memberStats:{flexDirection:"row",gap:19,marginTop:14,borderTopWidth:1,borderTopColor:"#F0F0F0",paddingTop:12},
   memberStat:{fontSize:13,color:"#77778A"},statNumber:{fontWeight:"900",color:"#25253A"},notice:{backgroundColor:"#FFF",borderRadius:14,padding:17,marginTop:18,borderWidth:1,borderColor:"#EEEEEE"},noticeTitle:{fontSize:14,fontWeight:"800",color:"#29293D"},noticeText:{fontSize:13,color:"#858597",lineHeight:19,marginTop:5},
-  overlay:{flex:1,backgroundColor:"rgba(20,20,35,.42)",justifyContent:"flex-end"},sheet:{maxHeight:"92%",backgroundColor:"#FFF",borderTopLeftRadius:24,borderTopRightRadius:24,padding:24,paddingBottom:30},sheetTitle:{fontSize:21,fontWeight:"800",color:"#242438",marginBottom:12},
-  label:{fontSize:14,fontWeight:"700",color:"#45455A",marginTop:14,marginBottom:7},input:{height:53,borderWidth:1,borderColor:"#E8E8E8",borderRadius:12,paddingHorizontal:15,color:"#25253A",fontSize:14},
+  overlay:{flex:1,backgroundColor:"rgba(20,20,35,.38)",justifyContent:"flex-end"},sheet:{maxHeight:"88%",backgroundColor:"#FFF",borderTopLeftRadius:24,borderTopRightRadius:24,paddingHorizontal:22,paddingTop:22,paddingBottom:28,elevation:12,shadowColor:"#000",shadowOpacity:0.14,shadowRadius:16,shadowOffset:{width:0,height:-4}},sheetTitle:{fontSize:21,fontWeight:"800",color:"#242438",marginBottom:12},
+  label:{fontSize:14,fontWeight:"700",color:"#45455A",marginTop:14,marginBottom:7},input:{height:54,borderWidth:1,borderColor:"#DCDCE3",borderRadius:13,paddingHorizontal:15,color:"#25253A",fontSize:15,backgroundColor:"#FAFAFC"},
   choices:{flexDirection:"row",gap:9,marginTop:4},choice:{paddingHorizontal:14,paddingVertical:12,borderRadius:10,borderWidth:1,borderColor:"#E8E8E8"},choiceActive:{backgroundColor:"#FCE8E8",borderColor:"#D71920"},choiceText:{fontSize:13,color:"#77778A"},choiceTextActive:{color:"#D71920",fontWeight:"800"},
   save:{height:56,backgroundColor:"#D71920",borderRadius:13,alignItems:"center",justifyContent:"center",marginTop:22},saveText:{fontSize:15,color:"#FFF",fontWeight:"800"},cancel:{padding:16,alignItems:"center"},cancelText:{fontSize:14,color:"#77778A",fontWeight:"700"}
 });
