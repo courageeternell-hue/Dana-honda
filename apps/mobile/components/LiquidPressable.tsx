@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import {
   Animated,
   Pressable as NativePressable,
@@ -7,7 +7,6 @@ import {
   type PressableStateCallbackType,
 } from "react-native";
 
-const AnimatedPressable = Animated.createAnimatedComponent(NativePressable);
 type Props = PressableProps & { glass?: boolean };
 
 export function LiquidPressable({
@@ -20,8 +19,16 @@ export function LiquidPressable({
   ...props
 }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
+  const [pressed, setPressed] = useState(false);
 
-  const pressIn = (event: any) => {
+  const pressState: PressableStateCallbackType = {
+    pressed,
+    hovered: false,
+    focused: false,
+  };
+
+  const pressIn = (event: Parameters<NonNullable<PressableProps["onPressIn"]>>[0]) => {
+    setPressed(true);
     Animated.spring(scale, {
       toValue: 0.965,
       speed: 34,
@@ -31,7 +38,8 @@ export function LiquidPressable({
     onPressIn?.(event);
   };
 
-  const pressOut = (event: any) => {
+  const pressOut = (event: Parameters<NonNullable<PressableProps["onPressOut"]>>[0]) => {
+    setPressed(false);
     Animated.spring(scale, {
       toValue: 1,
       speed: 26,
@@ -41,42 +49,37 @@ export function LiquidPressable({
     onPressOut?.(event);
   };
 
-  const resolvedStyle = (state: PressableStateCallbackType) => [
-    typeof style === "function" ? style(state) : style,
-    { transform: [{ scale }] },
+  const resolvedStyle = [
+    typeof style === "function" ? style(pressState) : style,
   ];
 
-  const renderChildren = (state: PressableStateCallbackType) => (
-    <>
-      {typeof children === "function" ? children(state) : children}
-      {glass ? (
-        <View
-          pointerEvents="none"
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            borderRadius: 14,
-            borderWidth: 1,
-            borderColor: "rgba(255,255,255,0.48)",
-            backgroundColor: "rgba(255,255,255,0.045)",
-          }}
-        />
-      ) : null}
-    </>
-  );
-
   return (
-    <AnimatedPressable
-      {...props}
-      disabled={disabled}
-      onPressIn={pressIn}
-      onPressOut={pressOut}
-      style={resolvedStyle}
-    >
-      {renderChildren}
-    </AnimatedPressable>
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <NativePressable
+        {...props}
+        disabled={disabled}
+        onPressIn={pressIn}
+        onPressOut={pressOut}
+        style={resolvedStyle}
+      >
+        {typeof children === "function" ? children(pressState) : children}
+        {glass ? (
+          <View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: "rgba(255,255,255,0.48)",
+              backgroundColor: "rgba(255,255,255,0.045)",
+            }}
+          />
+        ) : null}
+      </NativePressable>
+    </Animated.View>
   );
 }
