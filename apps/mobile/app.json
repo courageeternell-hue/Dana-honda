@@ -11,7 +11,7 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/dana-honda-icon.png"
+        "foregroundImage": "./assets/dana-honda-icon-square.png"
       }
     },
     "plugins": [
@@ -41,6 +41,6 @@
       }
     },
     "owner": "ichatasya",
-    "icon": "./assets/dana-honda-icon.png"
+    "icon": "./assets/dana-honda-icon-square.png"
   }
 }
