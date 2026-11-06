@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Alert, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { AppAlert as Alert } from "@/components/AppAlert";
 import { LiquidPressable as Pressable } from "@/components/LiquidPressable";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
