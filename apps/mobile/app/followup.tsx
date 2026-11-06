@@ -320,7 +320,7 @@ const s = StyleSheet.create({
   dayButton: { borderRadius: 12 },
   daySelected: { backgroundColor: "#E60012" },
   dayToday: { borderWidth: 1.5, borderColor: "#E60012" },
-  dayNumber: { fontFamily: "sans-serif", fontSize: 13, fontWeight: "600", color: "#34343D", includeFontPadding: false },
+  dayNumber: { fontSize: 14, fontWeight: "700", color: "#34343D", includeFontPadding: false },
   dayNumberSelected: { color: "#FFF", fontWeight: "900" },
   eventDot: { position: "absolute", bottom: 4, width: 5, height: 5, borderRadius: 3, backgroundColor: "#E60012" },
   eventDotSelected: { backgroundColor: "#FFF" },
