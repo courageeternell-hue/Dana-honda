@@ -26,9 +26,9 @@ export function LiquidPressable({
   const pressIn = (event: Parameters<NonNullable<PressableProps["onPressIn"]>>[0]) => {
     setPressed(true);
     Animated.spring(scale, {
-      toValue: 0.965,
-      speed: 34,
-      bounciness: 4,
+      toValue: 0.975,
+      speed: 38,
+      bounciness: 3,
       useNativeDriver: true,
     }).start();
     onPressIn?.(event);
@@ -70,8 +70,8 @@ export function LiquidPressable({
               bottom: 0,
               borderRadius: 14,
               borderWidth: 1,
-              borderColor: "rgba(255,255,255,0.48)",
-              backgroundColor: "rgba(255,255,255,0.045)",
+              borderColor: "rgba(255,255,255,0.38)",
+              backgroundColor: pressed ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.035)",
             }}
           />
         ) : null}
