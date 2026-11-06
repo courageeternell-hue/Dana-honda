@@ -9,7 +9,6 @@ import * as XLSX from "xlsx-js-style";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
-import { syncLocalSalesReminders } from "@/lib/localNotifications";
 
 type Prospect = { id:string; user_id:string; customer_name:string; phone:string; unit_interest:string|null; source:string|null; address:string|null; status:string; deal_status:string; spk_created:boolean; notes:string|null; follow_up:string|null; created_at:string };
 type Draft = { customer_name:string; phone:string; unit_interest:string; source:string; address:string; status:string; notes:string; follow_up:string };
@@ -59,7 +58,7 @@ export default function ProspekScreen() {
       : await supabase.from("prospects").insert({...payload,user_id:profile.id,prospect_date:new Date().toISOString().slice(0,10),deal_status:"Belum",lead_response:null,spk_created:false});
     setSaving(false);
     if(result.error){Alert.alert("Gagal menyimpan",result.error.message);return;}
-    setModal(false);await load();void syncLocalSalesReminders(profile.id).catch(()=>{});
+    setModal(false);await load();
   }
   function convertToSpk(item:Prospect){
     if(item.spk_created){Alert.alert("Sudah menjadi SPK","Prospek ini sudah pernah dikonversi.");return;}
@@ -105,7 +104,7 @@ export default function ProspekScreen() {
       {text:"Batal",style:"cancel"},
       {text:"Hapus",style:"destructive",onPress:async()=>{
         const {error}=await supabase.from("prospects").delete().eq("id",item.id);
-        if(error) Alert.alert("Tidak bisa menghapus",error.message); else { await load(); if(profile)void syncLocalSalesReminders(profile.id).catch(()=>{}); }
+        if(error) Alert.alert("Tidak bisa menghapus",error.message); else load();
       }}
     ]);
   }
