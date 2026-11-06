@@ -17,7 +17,7 @@ const blankDraft=():Draft=>({spk_date:localDateString(new Date()),customer_name:
 export default function SpkScreen(){
  const {profile}=useAuth();
  const [items,setItems]=useState<Spk[]>([]);
- const [draft,setDraft]=useState<Draft>(blank);
+ const [draft,setDraft]=useState<Draft>(blankDraft());
  const [editing,setEditing]=useState<string|null>(null);
  const [modal,setModal]=useState(false);
  const [loading,setLoading]=useState(true);
