@@ -9,7 +9,7 @@ import * as XLSX from "xlsx-js-style";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 
-type Prospect = { id:string; user_id:string; customer_name:string; phone:string; unit_interest:string|null; source:string|null; address:string|null; status:string; deal_status:string; notes:string|null; follow_up:string|null; created_at:string };
+type Prospect = { id:string; user_id:string; customer_name:string; phone:string; unit_interest:string|null; source:string|null; address:string|null; status:string; deal_status:string; spk_created:boolean; notes:string|null; follow_up:string|null; created_at:string };
 type Draft = { customer_name:string; phone:string; unit_interest:string; source:string; address:string; status:string; notes:string; follow_up:string };
 const blank:Draft={customer_name:"",phone:"",unit_interest:"",source:"",address:"",status:"Belum Respon",notes:"",follow_up:""};
 
@@ -21,13 +21,14 @@ export default function ProspekScreen() {
   const [modal,setModal]=useState(false);
   const [loading,setLoading]=useState(true);
   const [saving,setSaving]=useState(false);
+  const [converting,setConverting]=useState<string|null>(null);
   const [error,setError]=useState("");
   const [search,setSearch]=useState("");
   const [statusFilter,setStatusFilter]=useState("Semua");
   const [calendarOpen,setCalendarOpen]=useState(false);
 
   const load=useCallback(async()=>{
-    const {data,error}=await supabase.from("prospects").select("id,user_id,customer_name,phone,unit_interest,source,address,status,deal_status,notes,follow_up,created_at").order("created_at",{ascending:false});
+    const {data,error}=await supabase.from("prospects").select("id,user_id,customer_name,phone,unit_interest,source,address,status,deal_status,spk_created,notes,follow_up,created_at").order("created_at",{ascending:false});
     if(error) setError(error.message); else {setItems((data??[]) as Prospect[]);setError("");}
     setLoading(false);
   },[]);
@@ -56,6 +57,45 @@ export default function ProspekScreen() {
     setSaving(false);
     if(result.error){Alert.alert("Gagal menyimpan",result.error.message);return;}
     setModal(false);await load();
+  }
+  function convertToSpk(item:Prospect){
+    if(item.spk_created){Alert.alert("Sudah menjadi SPK","Prospek ini sudah pernah dikonversi.");return;}
+    if(!item.unit_interest?.trim()){Alert.alert("Tipe motor belum diisi","Edit prospek dan isi motor yang diminati sebelum diubah menjadi SPK.");return;}
+    Alert.alert("Ubah Prospek menjadi SPK?",`Data ${item.customer_name} akan disalin ke Buku SPK dengan status Proses. Prospek asli tetap tersimpan.`,[
+      {text:"Batal",style:"cancel"},
+      {text:"Ubah ke SPK",onPress:async()=>{
+        if(!profile||converting)return;
+        setConverting(item.id);
+        const today=new Date();
+        const spkDate=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,"0")}-${String(today.getDate()).padStart(2,"0")}`;
+        const {error:insertError}=await supabase.from("spk_records").insert({
+          user_id:item.user_id,
+          prospect_id:item.id,
+          sales_name:profile.full_name||"",
+          spk_date:spkDate,
+          customer_name:item.customer_name,
+          phone:item.phone,
+          address:item.address,
+          source:item.source,
+          unit_type:item.unit_interest.trim(),
+          dp_cash:null,
+          leasing:null,
+          notes:item.notes,
+          status:"Proses"
+        });
+        if(insertError){
+          setConverting(null);
+          Alert.alert("Gagal mengubah ke SPK",insertError.code==="23505"?"Prospek ini sudah memiliki SPK. Muat ulang halaman untuk melihat status terbaru.":insertError.message);
+          await load();
+          return;
+        }
+        const {error:updateError}=await supabase.from("prospects").update({spk_created:true,status:"Deal",deal_status:"Deal",updated_at:new Date().toISOString()}).eq("id",item.id).eq("user_id",item.user_id);
+        setConverting(null);
+        await load();
+        if(updateError)Alert.alert("SPK berhasil dibuat","Data SPK sudah tersimpan, tetapi status prospek belum berhasil diperbarui. Hubungi supervisor untuk pemeriksaan.");
+        else Alert.alert("Berhasil","Prospek berhasil dipindahkan ke Buku SPK.");
+      }}
+    ]);
   }
   function remove(item:Prospect){
     Alert.alert("Hapus prospek?",`Data ${item.customer_name} akan dihapus.`,[
@@ -98,7 +138,7 @@ export default function ProspekScreen() {
         {!!item.unit_interest&&<Text style={s.detail}>Minat: {item.unit_interest}</Text>}
         {!!item.source&&<Text style={s.detail}>Sumber: {item.source}</Text>}{!!item.address&&<Text style={s.detail}>Alamat: {item.address}</Text>}
         {!!item.follow_up&&<Text style={s.followUp}>Jadwal follow-up: {item.follow_up}{item.follow_up<=new Date().toISOString().slice(0,10)?" • Perlu ditindaklanjuti":""}</Text>}
-        <View style={s.actions}><Pressable onPress={()=>openEdit(item)}><Text style={s.edit}>Edit</Text></Pressable><Pressable onPress={()=>remove(item)}><Text style={s.delete}>Hapus</Text></Pressable></View>
+        <View style={s.actions}><Pressable onPress={()=>openEdit(item)}><Text style={s.edit}>Edit</Text></Pressable><Pressable onPress={()=>remove(item)}><Text style={s.delete}>Hapus</Text></Pressable>{item.spk_created?<Text style={s.converted}>Sudah SPK</Text>:<Pressable disabled={converting===item.id} onPress={()=>convertToSpk(item)} style={[s.convertButton,converting===item.id&&{opacity:.6}]}><Text style={s.convertText}>{converting===item.id?"Memproses...":"Ubah ke SPK"}</Text></Pressable>}</View>
       </View>)}
     </ScrollView>}
     <Modal visible={modal} animationType="slide" transparent onRequestClose={()=>setModal(false)}>
@@ -143,6 +183,6 @@ export default function ProspekScreen() {
 const s=StyleSheet.create({
  page:{flex:1,backgroundColor:"#F4F5F7",paddingHorizontal:20,paddingTop:26,paddingBottom:28},searchInput:{height:54,backgroundColor:"#FFF",borderWidth:1,borderColor:"#E8E8E8",borderRadius:14,paddingHorizontal:15,color:"#25253A",fontSize:14,marginBottom:10},filterRow:{gap:10,paddingBottom:0,marginBottom:6},filterChip:{paddingHorizontal:14,paddingVertical:10,borderRadius:10,backgroundColor:"#FFF",borderWidth:1,borderColor:"#E8E8E8"},filterChipActive:{backgroundColor:"#FFF0F1",borderColor:"#E60012"},filterText:{fontSize:12,color:"#77778A"},filterTextActive:{color:"#E60012",fontWeight:"800"},followUp:{fontSize:13,color:"#E60012",fontWeight:"700",marginTop:8},header:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",marginBottom:22},title:{fontSize:29,fontWeight:"900",fontStyle:"italic",color:"#222229"},subtitle:{fontSize:14,color:"#858597",marginTop:4},headerActions:{flexDirection:"row",alignItems:"center",gap:10},excelBtn:{minHeight:48,backgroundColor:"#FFF",borderWidth:1,borderColor:"#E60012",paddingHorizontal:14,paddingVertical:12,borderRadius:14,alignItems:"center",justifyContent:"center"},excelText:{color:"#E60012",fontSize:13,fontWeight:"900"},add:{minHeight:48,backgroundColor:"#E60012",paddingHorizontal:18,paddingVertical:13,borderRadius:14,alignItems:"center",justifyContent:"center"},addText:{color:"#FFF",fontSize:14,fontWeight:"800"},
  center:{alignItems:"center",justifyContent:"flex-start",gap:11,paddingTop:0},muted:{fontSize:14,color:"#9292A3"},empty:{backgroundColor:"#FFF",padding:24,borderRadius:20,alignItems:"center",marginTop:0},emptyTitle:{fontSize:16,fontWeight:"800",color:"#29293D",marginBottom:6},
- card:{width:"100%",alignSelf:"stretch",backgroundColor:"#FFF",padding:14,borderRadius:16,marginBottom:10,borderWidth:1,borderColor:"#E8EAF0"},cardTop:{flexDirection:"row",alignItems:"flex-start",gap:9},customer:{fontSize:15,fontWeight:"800",color:"#29293D"},phone:{fontSize:12,color:"#858597",marginTop:2},status:{fontSize:11,color:"#E60012",backgroundColor:"#FFF0F1",paddingHorizontal:9,paddingVertical:6,borderRadius:8,overflow:"hidden",fontWeight:"800"},statusNew:{color:"#2876C7",backgroundColor:"#EAF3FF"},statusProcess:{color:"#C87917",backgroundColor:"#FFF3E2"},statusDeal:{color:"#168653",backgroundColor:"#E8F7EF"},detail:{fontSize:12,color:"#66667A",marginTop:6,lineHeight:17},actions:{flexDirection:"row",gap:18,marginTop:10,borderTopWidth:1,borderTopColor:"#F0F0F0",paddingTop:10},edit:{fontSize:14,fontWeight:"800",color:"#E60012"},delete:{fontSize:14,fontWeight:"800",color:"#C44545"},error:{color:"#B74747",fontSize:14,marginVertical:12},
+ card:{width:"100%",alignSelf:"stretch",backgroundColor:"#FFF",padding:14,borderRadius:16,marginBottom:10,borderWidth:1,borderColor:"#E8EAF0"},cardTop:{flexDirection:"row",alignItems:"flex-start",gap:9},customer:{fontSize:15,fontWeight:"800",color:"#29293D"},phone:{fontSize:12,color:"#858597",marginTop:2},status:{fontSize:11,color:"#E60012",backgroundColor:"#FFF0F1",paddingHorizontal:9,paddingVertical:6,borderRadius:8,overflow:"hidden",fontWeight:"800"},statusNew:{color:"#2876C7",backgroundColor:"#EAF3FF"},statusProcess:{color:"#C87917",backgroundColor:"#FFF3E2"},statusDeal:{color:"#168653",backgroundColor:"#E8F7EF"},detail:{fontSize:12,color:"#66667A",marginTop:6,lineHeight:17},actions:{flexDirection:"row",alignItems:"center",flexWrap:"wrap",gap:14,marginTop:10,borderTopWidth:1,borderTopColor:"#F0F0F0",paddingTop:10},convertButton:{backgroundColor:"#E60012",paddingHorizontal:12,paddingVertical:8,borderRadius:9},convertText:{fontSize:12,fontWeight:"800",color:"#FFF"},converted:{fontSize:12,fontWeight:"800",color:"#168653"},edit:{fontSize:14,fontWeight:"800",color:"#E60012"},delete:{fontSize:14,fontWeight:"800",color:"#C44545"},error:{color:"#B74747",fontSize:14,marginVertical:12},
  overlay:{flex:1,backgroundColor:"rgba(20,20,35,.42)",justifyContent:"flex-end"},sheet:{maxHeight:"92%",backgroundColor:"#FFF",borderTopLeftRadius:24,borderTopRightRadius:24,padding:24,paddingBottom:30},sheetTitle:{fontSize:21,fontWeight:"800",color:"#25252B",marginBottom:12},field:{marginTop:16},dateButton:{minHeight:54,borderWidth:1,borderColor:"#E5E5EA",borderRadius:14,paddingHorizontal:15,flexDirection:"row",alignItems:"center",justifyContent:"space-between",backgroundColor:"#FFF"},calendarFooter:{flexDirection:"row",alignItems:"center",justifyContent:"space-between",paddingHorizontal:3,paddingTop:12},calendarAction:{fontSize:14,fontWeight:"800",color:"#E60012"},calendarClear:{fontSize:14,fontWeight:"700",color:"#77778A"},dateButtonText:{fontSize:14,color:"#29293D",fontWeight:"600"},datePlaceholder:{color:"#A1A1B0",fontWeight:"400"},calendarIcon:{fontSize:21,color:"#E60012"},sourcePanel:{padding:14,borderRadius:13,borderWidth:1,borderColor:"#E8E8ED",backgroundColor:"#FAFAFB"},sourceHint:{fontSize:13,color:"#858597",marginBottom:10},sourceChoices:{flexDirection:"row",flexWrap:"wrap",gap:9},sourceChoice:{paddingHorizontal:14,paddingVertical:11,borderRadius:10},sourceInput:{height:49,borderWidth:1,borderColor:"#E8E8ED",borderRadius:10,paddingHorizontal:13,color:"#25253A",fontSize:14,marginTop:10,backgroundColor:"#FFF"},label:{fontSize:14,fontWeight:"700",color:"#45455A",marginBottom:8},input:{height:54,borderWidth:1,borderColor:"#E8E8E8",borderRadius:14,paddingHorizontal:15,color:"#25253A",fontSize:14},multiline:{height:80,textAlignVertical:"top",paddingTop:12},statusChoices:{flexDirection:"row",flexWrap:"wrap",gap:8},choice:{paddingHorizontal:12,paddingVertical:10,borderRadius:9,borderWidth:1,borderColor:"#E8E8E8"},choiceActive:{backgroundColor:"#FFF0F1",borderColor:"#E60012"},choiceText:{fontSize:12,color:"#77778A"},choiceTextActive:{color:"#E60012",fontWeight:"800"},save:{height:56,backgroundColor:"#E60012",borderRadius:14,alignItems:"center",justifyContent:"center",marginTop:26},saveText:{fontSize:15,color:"#FFF",fontWeight:"800"},cancel:{padding:16,alignItems:"center"},cancelText:{fontSize:14,color:"#77778A",fontWeight:"700"}
 });
