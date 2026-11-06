@@ -120,12 +120,14 @@ drop policy if exists "spk delete own or supervisor" on public.spk_records;
 create policy "spk delete own or manager" on public.spk_records for delete
 using (user_id=auth.uid() or public.is_manager());
 
-create policy "logs own or supervisor read" on public.activity_logs for select
-using (actor_id=auth.uid() or public.is_supervisor());
+drop policy if exists "logs own or supervisor read" on public.activity_logs;
+create policy "logs own or manager read" on public.activity_logs for select
+using (actor_id=auth.uid() or public.is_manager());
 create policy "logs insert own" on public.activity_logs for insert
 with check (actor_id=auth.uid());
-create policy "reports supervisor only" on public.daily_reports for all
-using (public.is_supervisor()) with check (public.is_supervisor());
+drop policy if exists "reports supervisor only" on public.daily_reports;
+create policy "reports manager only" on public.daily_reports for all
+using (public.is_manager()) with check (public.is_manager());
 drop policy if exists "targets own or supervisor read" on public.sales_targets;
 create policy "targets own or manager read" on public.sales_targets for select
 using (user_id=auth.uid() or public.is_manager());
