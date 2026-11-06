@@ -42,7 +42,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add apps/mobile/package-lock.json
           if ! git diff --cached --quiet; then
-            git commit -m "chore(mobile): add npm lockfile"
+            git commit -m "chore(mobile): update npm lockfile"
+            git pull --rebase origin native-mobile-app
             git push
           fi
       - name: Prepare square app icon
