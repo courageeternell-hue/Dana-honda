@@ -1,16 +1,7 @@
 name: Expo EAS Android APK
 
 on:
-  push:
-    branches:
-      - native-mobile-app
-    paths:
-      - "apps/mobile/**"
-      - ".github/workflows/expo-eas-build.yml"
   workflow_dispatch:
-
-permissions:
-  contents: write
 
 jobs:
   build-android:
