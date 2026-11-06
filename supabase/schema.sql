@@ -79,9 +79,9 @@ create table if not exists public.sales_targets (
 create index if not exists prospects_user_date_idx on public.prospects(user_id,prospect_date);
 create index if not exists spk_user_date_idx on public.spk_records(user_id,spk_date);
 
-create or replace function public.is_supervisor()
+create or replace function public.is_manager()
 returns boolean language sql stable security definer set search_path=public
-as $$ select exists(select 1 from public.profiles where id=auth.uid() and role='supervisor'); $$;
+as $ select exists(select 1 from public.profiles where id=auth.uid() and role in ('admin','supervisor') and is_active=true); $;
 
 alter table public.profiles enable row level security;
 alter table public.prospects enable row level security;
@@ -90,29 +90,35 @@ alter table public.activity_logs enable row level security;
 alter table public.daily_reports enable row level security;
 alter table public.sales_targets enable row level security;
 
-create policy "profiles self or supervisor read" on public.profiles for select
-using (id=auth.uid() or public.is_supervisor());
-drop policy if exists "supervisor manages profiles" on public.profiles;
+drop policy if exists "profiles self or supervisor read" on public.profiles;
+create policy "profiles self or manager read" on public.profiles for select
+using (id=auth.uid() or public.is_manager());
 
-create policy "prospects own or supervisor read" on public.prospects for select
-using (user_id=auth.uid() or public.is_supervisor());
+drop policy if exists "prospects own or supervisor read" on public.prospects;
+create policy "prospects own or manager read" on public.prospects for select
+using (user_id=auth.uid() or public.is_manager());
 create policy "prospects insert own" on public.prospects for insert
 with check (user_id=auth.uid());
-create policy "prospects update own or supervisor" on public.prospects for update
-using (user_id=auth.uid() or public.is_supervisor())
-with check (user_id=auth.uid() or public.is_supervisor());
-create policy "prospects delete own or supervisor" on public.prospects for delete
-using (user_id=auth.uid() or public.is_supervisor());
+drop policy if exists "prospects update own or supervisor" on public.prospects;
+create policy "prospects update own or manager" on public.prospects for update
+using (user_id=auth.uid() or public.is_manager())
+with check (user_id=auth.uid() or public.is_manager());
+drop policy if exists "prospects delete own or supervisor" on public.prospects;
+create policy "prospects delete own or manager" on public.prospects for delete
+using (user_id=auth.uid() or public.is_manager());
 
-create policy "spk own or supervisor read" on public.spk_records for select
-using (user_id=auth.uid() or public.is_supervisor());
+drop policy if exists "spk own or supervisor read" on public.spk_records;
+create policy "spk own or manager read" on public.spk_records for select
+using (user_id=auth.uid() or public.is_manager());
 create policy "spk insert own" on public.spk_records for insert
 with check (user_id=auth.uid());
-create policy "spk update own or supervisor" on public.spk_records for update
-using (user_id=auth.uid() or public.is_supervisor())
-with check (user_id=auth.uid() or public.is_supervisor());
-create policy "spk delete own or supervisor" on public.spk_records for delete
-using (user_id=auth.uid() or public.is_supervisor());
+drop policy if exists "spk update own or supervisor" on public.spk_records;
+create policy "spk update own or manager" on public.spk_records for update
+using (user_id=auth.uid() or public.is_manager())
+with check (user_id=auth.uid() or public.is_manager());
+drop policy if exists "spk delete own or supervisor" on public.spk_records;
+create policy "spk delete own or manager" on public.spk_records for delete
+using (user_id=auth.uid() or public.is_manager());
 
 create policy "logs own or supervisor read" on public.activity_logs for select
 using (actor_id=auth.uid() or public.is_supervisor());
@@ -120,10 +126,12 @@ create policy "logs insert own" on public.activity_logs for insert
 with check (actor_id=auth.uid());
 create policy "reports supervisor only" on public.daily_reports for all
 using (public.is_supervisor()) with check (public.is_supervisor());
-create policy "targets own or supervisor read" on public.sales_targets for select
-using (user_id=auth.uid() or public.is_supervisor());
-create policy "targets supervisor manage" on public.sales_targets for all
-using (public.is_supervisor()) with check (public.is_supervisor());
+drop policy if exists "targets own or supervisor read" on public.sales_targets;
+create policy "targets own or manager read" on public.sales_targets for select
+using (user_id=auth.uid() or public.is_manager());
+drop policy if exists "targets supervisor manage" on public.sales_targets;
+create policy "targets manager manage" on public.sales_targets for all
+using (public.is_manager()) with check (public.is_manager());
 
 -- Buat bucket private bernama daily-reports di Storage.
 -- Tambahkan profile sales/supervisor secara terkontrol setelah akun Auth dibuat.
