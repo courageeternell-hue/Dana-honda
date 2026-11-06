@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
 type P = {
   id: string;
@@ -21,12 +22,6 @@ type P = {
   status: string;
   follow_up: string | null;
 };
-
-const monthNames = [
-  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
-  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
-];
-const weekdays = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
 function dateKey(date: Date) {
   const year = date.getFullYear();
@@ -53,10 +48,8 @@ export default function FollowUp() {
   const { profile } = useAuth();
   const [items, setItems] = useState<P[]>([]);
   const [loading, setLoading] = useState(true);
-  const [calendarMonth, setCalendarMonth] = useState(
-    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-  );
   const [selectedDate, setSelectedDate] = useState(() => dateKey(new Date()));
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
 
   const load = useCallback(async () => {
     if (!profile) {
@@ -79,14 +72,6 @@ export default function FollowUp() {
   }, [load]);
 
   const today = dateKey(new Date());
-  const monthStart = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), 1);
-  const firstWeekday = monthStart.getDay();
-  const daysInMonth = new Date(
-    calendarMonth.getFullYear(),
-    calendarMonth.getMonth() + 1,
-    0,
-  ).getDate();
-
   const itemsByDate = useMemo(() => {
     const grouped: Record<string, P[]> = {};
     items.forEach((item) => {
@@ -100,14 +85,6 @@ export default function FollowUp() {
   const selectedItems = itemsByDate[selectedDate] ?? [];
   const dueCount = items.filter((item) => (item.follow_up ?? "").slice(0, 10) <= today).length;
   const upcomingCount = items.length - dueCount;
-
-  function changeMonth(offset: number) {
-    setCalendarMonth((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1));
-  }
-
-  function chooseDay(day: number) {
-    setSelectedDate(dateKey(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day)));
-  }
 
   return (
     <ScrollView
@@ -131,63 +108,42 @@ export default function FollowUp() {
 
       <View style={s.calendarCard}>
         <View style={s.calendarHeader}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={s.calendarCaption}>KALENDER FOLLOW-UP</Text>
-            <Text style={s.monthTitle}>
-              {monthNames[calendarMonth.getMonth()]} {calendarMonth.getFullYear()}
-            </Text>
-          </View>
-          <View style={s.monthControls}>
-            <Pressable glass={false} accessibilityLabel="Bulan sebelumnya" onPress={() => changeMonth(-1)} style={s.monthArrow}>
-              <Ionicons name="chevron-back" size={18} color="#E60012" />
-            </Pressable>
-            <Pressable glass={false} accessibilityLabel="Bulan berikutnya" onPress={() => changeMonth(1)} style={s.monthArrow}>
-              <Ionicons name="chevron-forward" size={18} color="#E60012" />
-            </Pressable>
+            <Text style={s.monthTitle}>{formatDate(selectedDate)}</Text>
           </View>
         </View>
 
-        <View style={s.calendarGrid}>
-          {weekdays.map((day) => (
-            <Text key={day} style={s.weekday}>{day}</Text>
-          ))}
-          {Array.from({ length: firstWeekday }, (_, index) => (
-            <View key={`empty-${index}`} style={s.dayCell} />
-          ))}
-          {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((day) => {
-            const key = dateKey(new Date(calendarMonth.getFullYear(), calendarMonth.getMonth(), day));
-            const count = itemsByDate[key]?.length ?? 0;
-            const isSelected = selectedDate === key;
-            const isToday = today === key;
-            return (
-              <Pressable
-                key={key}
-                glass={false}
-                accessibilityRole="button"
-                accessibilityLabel={`${day} ${monthNames[calendarMonth.getMonth()]}, ${count} jadwal`}
-                onPress={() => chooseDay(day)}
-                style={[s.dayCell, s.dayButton, isSelected && s.daySelected, isToday && !isSelected && s.dayToday]}
-              >
-                <CalendarDayNumber value={day} selected={isSelected} />
-                {count > 0 && <View style={[s.eventDot, isSelected && s.eventDotSelected]} />}
-              </Pressable>
-            );
-          })}
-        </View>
-
-        <View style={s.calendarLegend}>
-          <View style={s.legendDot} />
-          <Text style={s.legendText}>Ada jadwal follow-up</Text>
-          <View style={s.todayOutline} />
-          <Text style={s.legendText}>Hari ini</Text>
-        </View>
         <Pressable
           glass={false}
-          onPress={() => {
-            const now = new Date();
-            setCalendarMonth(new Date(now.getFullYear(), now.getMonth(), 1));
-            setSelectedDate(today);
-          }}
+          accessibilityRole="button"
+          accessibilityLabel="Buka kalender bawaan HP untuk memilih tanggal"
+          onPress={() => setDatePickerVisible(true)}
+          style={s.systemCalendarButton}
+        >
+          <Ionicons name="calendar-outline" size={21} color="#E60012" />
+          <View style={{ flex: 1 }}>
+            <Text style={s.systemCalendarTitle}>Pilih tanggal</Text>
+            <Text style={s.systemCalendarHint}>Gunakan kalender bawaan HP</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={19} color="#92929A" />
+        </Pressable>
+
+        {datePickerVisible && (
+          <DateTimePicker
+            value={parseDate(selectedDate)}
+            mode="date"
+            display="calendar"
+            onChange={(event, date) => {
+              setDatePickerVisible(false);
+              if (event.type === "set" && date) setSelectedDate(dateKey(date));
+            }}
+          />
+        )}
+
+        <Pressable
+          glass={false}
+          onPress={() => setSelectedDate(today)}
           style={s.todayButton}
         >
           <Text style={s.todayButtonText}>Kembali ke hari ini</Text>
@@ -221,8 +177,6 @@ export default function FollowUp() {
             style={s.compactItem}
             onPress={() => {
               if (item.follow_up) {
-                const date = parseDate(item.follow_up);
-                setCalendarMonth(new Date(date.getFullYear(), date.getMonth(), 1));
                 setSelectedDate(item.follow_up.slice(0, 10));
               }
             }}
@@ -247,39 +201,6 @@ export default function FollowUp() {
 }
 
 
-const digitSegments: Record<string, Array<"a" | "b" | "c" | "d" | "e" | "f" | "g">> = {
-  "0": ["a", "b", "c", "d", "e", "f"],
-  "1": ["b", "c"],
-  "2": ["a", "b", "g", "e", "d"],
-  "3": ["a", "b", "g", "c", "d"],
-  "4": ["f", "g", "b", "c"],
-  "5": ["a", "f", "g", "c", "d"],
-  "6": ["a", "f", "g", "e", "c", "d"],
-  "7": ["a", "b", "c"],
-  "8": ["a", "b", "c", "d", "e", "f", "g"],
-  "9": ["a", "b", "c", "d", "f", "g"],
-};
-
-function CalendarDayNumber({ value, selected }: { value: number; selected: boolean }) {
-  const positions = {
-    a: s.segmentA, b: s.segmentB, c: s.segmentC, d: s.segmentD,
-    e: s.segmentE, f: s.segmentF, g: s.segmentG,
-  };
-  return (
-    <View style={s.dayDigits} accessibilityElementsHidden>
-      {String(value).split("").map((digit, index) => (
-        <View key={`${digit}-${index}`} style={s.digit}>
-          {(digitSegments[digit] ?? []).map((segment) => (
-            <View
-              key={segment}
-              style={[s.segment, positions[segment], selected && s.segmentSelected]}
-            />
-          ))}
-        </View>
-      ))}
-    </View>
-  );
-}
 
 function Header() {
   return (
@@ -347,31 +268,9 @@ const s = StyleSheet.create({
   calendarHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
   calendarCaption: { fontSize: 10, letterSpacing: 1, fontWeight: "900", color: "#E60012", marginBottom: 4 },
   monthTitle: { fontSize: 19, fontWeight: "900", color: "#24242A" },
-  monthControls: { flexDirection: "row", gap: 8 },
-  monthArrow: { width: 36, height: 36, borderRadius: 11, backgroundColor: "#FFF0F1", alignItems: "center", justifyContent: "center" },
-  calendarGrid: { flexDirection: "row", flexWrap: "wrap" },
-  weekday: { width: "14.2857%", textAlign: "center", color: "#92929A", fontSize: 11, fontWeight: "800", paddingVertical: 9 },
-  dayCell: { width: "14.2857%", height: 43, alignItems: "center", justifyContent: "center" },
-  dayButton: { borderRadius: 12 },
-  daySelected: { backgroundColor: "#E60012" },
-  dayToday: { borderWidth: 1.5, borderColor: "#E60012" },
-  dayDigits: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 2, height: 14 },
-  digit: { width: 8, height: 14, position: "relative" },
-  segment: { position: "absolute", backgroundColor: "#34343D", borderRadius: 1 },
-  segmentSelected: { backgroundColor: "#FFFFFF" },
-  segmentA: { top: 0, left: 1, width: 6, height: 1.5 },
-  segmentB: { top: 1, right: 0, width: 1.5, height: 5 },
-  segmentC: { bottom: 1, right: 0, width: 1.5, height: 5 },
-  segmentD: { bottom: 0, left: 1, width: 6, height: 1.5 },
-  segmentE: { bottom: 1, left: 0, width: 1.5, height: 5 },
-  segmentF: { top: 1, left: 0, width: 1.5, height: 5 },
-  segmentG: { top: 6.25, left: 1, width: 6, height: 1.5 },
-  eventDot: { position: "absolute", bottom: 4, width: 5, height: 5, borderRadius: 3, backgroundColor: "#E60012" },
-  eventDotSelected: { backgroundColor: "#FFF" },
-  calendarLegend: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12 },
-  legendDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "#E60012" },
-  legendText: { color: "#888891", fontSize: 10, marginRight: 8 },
-  todayOutline: { width: 10, height: 10, borderRadius: 3, borderWidth: 1.5, borderColor: "#E60012" },
+  systemCalendarButton: { minHeight: 68, flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 14, paddingVertical: 12, borderRadius: 14, backgroundColor: "#FFF5F5", borderWidth: 1, borderColor: "#F8DCDD" },
+  systemCalendarTitle: { fontSize: 14, fontWeight: "900", color: "#292930" },
+  systemCalendarHint: { fontSize: 11, color: "#85858E", marginTop: 3 },
   todayButton: { alignSelf: "flex-start", marginTop: 12, paddingVertical: 7, paddingHorizontal: 11, backgroundColor: "#FFF0F1", borderRadius: 9 },
   todayButtonText: { fontSize: 11, fontWeight: "800", color: "#E60012" },
   listHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 11 },
