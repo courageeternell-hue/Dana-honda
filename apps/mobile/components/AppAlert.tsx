@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ReactNode } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -12,7 +13,7 @@ export const AppAlert = {
     presentDialog(title, message, buttons, options),
 };
 
-export function AppAlertProvider({ children }: { children: React.ReactNode }) {
+export function AppAlertProvider({ children }: { children: ReactNode }) {
   const [dialog, setDialog] = useState<DialogState | null>(null);
 
   useEffect(() => {
