@@ -16,7 +16,7 @@ function UpdateManager() {
         const update = await Updates.checkForUpdateAsync();
         if (!active || !update.isAvailable) return;
 
-        AppAlert.alert(
+        AppAppAlert.alert(
           "Pembaruan tersedia",
           "Versi terbaru Asisten Sales sudah tersedia. Perbarui sekarang untuk menggunakan fitur dan perbaikan terbaru.",
           [
@@ -28,7 +28,7 @@ function UpdateManager() {
                   await Updates.fetchUpdateAsync();
                   await Updates.reloadAsync();
                 } catch {
-                  Alert.alert("Update gagal", "Pembaruan belum berhasil diunduh. Periksa koneksi internet dan coba lagi nanti.");
+                  AppAlert.alert("Update gagal", "Pembaruan belum berhasil diunduh. Periksa koneksi internet dan coba lagi nanti.");
                 }
               },
             },
