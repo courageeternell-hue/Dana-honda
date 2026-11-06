@@ -1,0 +1,51 @@
+name: Publish OTA Preview
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ota-preview
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish Android OTA
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - name: Checkout native mobile branch
+        uses: actions/checkout@v4
+        with:
+          ref: native-mobile-app
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Check Expo Configuration
+        run: npx expo config --type public
+
+      - name: Publish OTA Update
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          CI: "1"
+        run: >
+          npx eas-cli update
+          --channel preview
+          --platform android
+          --message "Update menu Kelola Pengguna"
+          --non-interactive
