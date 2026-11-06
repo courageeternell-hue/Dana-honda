@@ -168,7 +168,7 @@ export default function FollowUp() {
                 onPress={() => chooseDay(day)}
                 style={[s.dayCell, s.dayButton, isSelected && s.daySelected, isToday && !isSelected && s.dayToday]}
               >
-                <Text style={[s.dayNumber, isSelected && s.dayNumberSelected]}>{day}</Text>
+                <Text allowFontScaling={false} style={[s.dayNumber, isSelected && s.dayNumberSelected]}>{String(day)}</Text>
                 {count > 0 && <View style={[s.eventDot, isSelected && s.eventDotSelected]} />}
               </Pressable>
             );
@@ -320,7 +320,7 @@ const s = StyleSheet.create({
   dayButton: { borderRadius: 12 },
   daySelected: { backgroundColor: "#E60012" },
   dayToday: { borderWidth: 1.5, borderColor: "#E60012" },
-  dayNumber: { fontSize: 13, fontWeight: "700", color: "#34343D" },
+  dayNumber: { fontFamily: "sans-serif", fontSize: 13, fontWeight: "600", color: "#34343D", includeFontPadding: false },
   dayNumberSelected: { color: "#FFF", fontWeight: "900" },
   eventDot: { position: "absolute", bottom: 4, width: 5, height: 5, borderRadius: 3, backgroundColor: "#E60012" },
   eventDotSelected: { backgroundColor: "#FFF" },
