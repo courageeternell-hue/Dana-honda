@@ -1,5 +1,6 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+export const viewport: Viewport = { width: "device-width", initialScale: 1, viewportFit: "cover" };
 export const metadata: Metadata = {
   title: "Honda Sales Report",
   description: "Sistem laporan prospek dan SPK tim sales Honda",
