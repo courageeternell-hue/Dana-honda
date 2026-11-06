@@ -168,7 +168,7 @@ export default function FollowUp() {
                 onPress={() => chooseDay(day)}
                 style={[s.dayCell, s.dayButton, isSelected && s.daySelected, isToday && !isSelected && s.dayToday]}
               >
-                <Text allowFontScaling={false} style={[s.dayNumber, isSelected && s.dayNumberSelected]}>{String(day)}</Text>
+                <CalendarDayNumber value={day} selected={isSelected} />
                 {count > 0 && <View style={[s.eventDot, isSelected && s.eventDotSelected]} />}
               </Pressable>
             );
@@ -246,6 +246,41 @@ export default function FollowUp() {
   );
 }
 
+
+const digitSegments: Record<string, Array<"a" | "b" | "c" | "d" | "e" | "f" | "g">> = {
+  "0": ["a", "b", "c", "d", "e", "f"],
+  "1": ["b", "c"],
+  "2": ["a", "b", "g", "e", "d"],
+  "3": ["a", "b", "g", "c", "d"],
+  "4": ["f", "g", "b", "c"],
+  "5": ["a", "f", "g", "c", "d"],
+  "6": ["a", "f", "g", "e", "c", "d"],
+  "7": ["a", "b", "c"],
+  "8": ["a", "b", "c", "d", "e", "f", "g"],
+  "9": ["a", "b", "c", "d", "f", "g"],
+};
+
+function CalendarDayNumber({ value, selected }: { value: number; selected: boolean }) {
+  const positions = {
+    a: s.segmentA, b: s.segmentB, c: s.segmentC, d: s.segmentD,
+    e: s.segmentE, f: s.segmentF, g: s.segmentG,
+  };
+  return (
+    <View style={s.dayDigits} accessibilityElementsHidden>
+      {String(value).split("").map((digit, index) => (
+        <View key={`${digit}-${index}`} style={s.digit}>
+          {(digitSegments[digit] ?? []).map((segment) => (
+            <View
+              key={segment}
+              style={[s.segment, positions[segment], selected && s.segmentSelected]}
+            />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
 function Header() {
   return (
     <View style={s.header}>
@@ -320,8 +355,17 @@ const s = StyleSheet.create({
   dayButton: { borderRadius: 12 },
   daySelected: { backgroundColor: "#E60012" },
   dayToday: { borderWidth: 1.5, borderColor: "#E60012" },
-  dayNumber: { fontSize: 14, fontWeight: "700", color: "#34343D", includeFontPadding: false },
-  dayNumberSelected: { color: "#FFF", fontWeight: "900" },
+  dayDigits: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 2, height: 14 },
+  digit: { width: 8, height: 14, position: "relative" },
+  segment: { position: "absolute", backgroundColor: "#34343D", borderRadius: 1 },
+  segmentSelected: { backgroundColor: "#FFFFFF" },
+  segmentA: { top: 0, left: 1, width: 6, height: 1.5 },
+  segmentB: { top: 1, right: 0, width: 1.5, height: 5 },
+  segmentC: { bottom: 1, right: 0, width: 1.5, height: 5 },
+  segmentD: { bottom: 0, left: 1, width: 6, height: 1.5 },
+  segmentE: { bottom: 1, left: 0, width: 1.5, height: 5 },
+  segmentF: { top: 1, left: 0, width: 1.5, height: 5 },
+  segmentG: { top: 6.25, left: 1, width: 6, height: 1.5 },
   eventDot: { position: "absolute", bottom: 4, width: 5, height: 5, borderRadius: 3, backgroundColor: "#E60012" },
   eventDotSelected: { backgroundColor: "#FFF" },
   calendarLegend: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 12 },
