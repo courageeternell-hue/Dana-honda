@@ -5,13 +5,14 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Metrics = { prospects:number; spk:number; closing:number; prospectTarget:number; spkTarget:number };
 const empty:Metrics={prospects:0,spk:0,closing:0,prospectTarget:0,spkTarget:0};
 function dateKey(date:Date){const y=date.getFullYear();const m=String(date.getMonth()+1).padStart(2,"0");const d=String(date.getDate()).padStart(2,"0");return `${y}-${m}-${d}`;}
 function Stat({label,value,note,icon}:{label:string;value:string;note:string;icon:keyof typeof Ionicons.glyphMap}){return <View style={s.stat}><View style={s.statTop}><View style={s.statIcon}><Ionicons name={icon} size={18} color="#E60012"/></View><Text style={s.statNote}>{note}</Text></View><Text style={s.statValue}>{value}</Text><Text style={s.statLabel}>{label}</Text></View>;}
 export default function HomeScreen(){
- const {profile}=useAuth();const [metrics,setMetrics]=useState<Metrics>(empty);const [loading,setLoading]=useState(true);const [refreshing,setRefreshing]=useState(false);const [error,setError]=useState("");
+ const insets=useSafeAreaInsets();const {profile}=useAuth();const [metrics,setMetrics]=useState<Metrics>(empty);const [loading,setLoading]=useState(true);const [refreshing,setRefreshing]=useState(false);const [error,setError]=useState("");
  const loadMetrics=useCallback(async()=>{if(!profile)return;setError("");const now=new Date();const start=dateKey(new Date(now.getFullYear(),now.getMonth(),1));const next=dateKey(new Date(now.getFullYear(),now.getMonth()+1,1));try{const [p,spk,c,t]=await Promise.all([supabase.from("prospects").select("id",{count:"exact",head:true}).gte("prospect_date",start).lt("prospect_date",next),supabase.from("spk_records").select("id",{count:"exact",head:true}).gte("spk_date",start).lt("spk_date",next),supabase.from("spk_records").select("id",{count:"exact",head:true}).eq("status","Jual").gte("spk_date",start).lt("spk_date",next),supabase.from("sales_targets").select("prospect_target,spk_target").gte("target_month",start).lt("target_month",next)]);const failed=[p.error,spk.error,c.error,t.error].find(Boolean);if(failed)throw failed;const rows=t.data??[];setMetrics({prospects:p.count??0,spk:spk.count??0,closing:c.count??0,prospectTarget:rows.reduce((n,x)=>n+(x.prospect_target??0),0),spkTarget:rows.reduce((n,x)=>n+(x.spk_target??0),0)});}catch(e){setError(e instanceof Error?e.message:"Gagal memuat ringkasan.");}finally{setLoading(false);setRefreshing(false);}},[profile]);
  useEffect(()=>{loadMetrics();},[loadMetrics]);const refresh=()=>{setRefreshing(true);loadMetrics();};
  const first=(profile?.full_name||"Sales").trim().split(/\s+/)[0];
@@ -23,7 +24,7 @@ export default function HomeScreen(){
   ["trophy","Leaderboard","Performa sales","/leaderboard"],
   ["bar-chart","Laporan","Export & rekap","/reports"],
  ] as const;
- return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#E60012"/>}>
+ return <ScrollView style={s.page} contentContainerStyle={[s.content,{paddingTop:insets.top+18}]} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#E60012"/>}>
   <View style={s.top}><View style={s.brandBlock}><View style={s.brandLine}><Image source={require("../../assets/dana-honda-icon-square.png")} style={s.brandLogo} resizeMode="contain"/><Text style={s.eyebrow}>ASISTEN SALES</Text></View><Text style={s.greeting}>Halo, {first}</Text><Text style={s.subtitle}>Semangat capai target hari ini!</Text></View><View style={s.topActions}><Pressable accessibilityRole="button" accessibilityLabel="Notifikasi" onPress={()=>router.push("/notifications")} style={s.notificationButton}><Ionicons name="notifications-outline" size={22} color="#E60012"/><View style={s.notificationDot}/></Pressable><Pressable onPress={()=>router.push("/(tabs)/profil")} style={s.avatar}><Text style={s.avatarText}>{(profile?.full_name||"S").slice(0,1).toUpperCase()}</Text></Pressable></View></View>
   {(profile?.role==="admin"||profile?.role==="supervisor")&&<Pressable onPress={()=>router.push("/admin")} style={s.manage}><Ionicons name="people-outline" color="#FFF" size={17}/><Text style={s.manageText}>Kelola Pengguna & Tim</Text><Ionicons name="chevron-forward" color="#FFF" size={17}/></Pressable>}
   <View style={s.hero}><View style={s.heroCopy}><Text style={s.heroEyebrow}>PERFORMA BULAN INI</Text><Text style={s.heroTitle}>Total Prospek</Text><Text style={s.heroNumber}>{loading?"—":metrics.prospects}</Text><Text style={s.heroFoot}>Pantau setiap peluang menjadi penjualan.</Text></View><View style={s.heroArt}><Ionicons name="trending-up" size={58} color="rgba(255,255,255,.22)"/><View style={s.heroBadge}><Text style={s.heroBadgeText}>SALES</Text></View></View></View>
@@ -37,7 +38,7 @@ export default function HomeScreen(){
  </ScrollView>;
 }
 const s=StyleSheet.create({
- page:{flex:1,backgroundColor:"#F4F5F7"},content:{paddingHorizontal:20,paddingTop:26,paddingBottom:42,alignItems:"stretch"},
+ page:{flex:1,backgroundColor:"#F4F5F7"},content:{paddingHorizontal:20,paddingTop:18,paddingBottom:42,alignItems:"stretch"},
  top:{flexDirection:"row",alignItems:"center",justifyContent:"space-between"},brandBlock:{flex:1},topActions:{flexDirection:"row",alignItems:"center",gap:10},notificationButton:{width:42,height:42,borderRadius:14,backgroundColor:"#FFF",borderWidth:1,borderColor:"#F0DADD",alignItems:"center",justifyContent:"center"},notificationDot:{position:"absolute",top:8,right:9,width:7,height:7,borderRadius:4,backgroundColor:"#E60012",borderWidth:1,borderColor:"#FFF"},brandLine:{flexDirection:"row",alignItems:"center",gap:8},brandLogo:{width:25,height:25,borderRadius:7},eyebrow:{fontSize:12,fontWeight:"900",letterSpacing:1.8,color:"#E60012"},greeting:{fontSize:28,fontWeight:"900",fontStyle:"italic",color:"#1F1F25",marginTop:5},subtitle:{fontSize:14,color:"#85858F",marginTop:4},
  avatar:{width:46,height:54,borderRadius:16,backgroundColor:"#FCE8EA",alignItems:"center",justifyContent:"center",borderWidth:2,borderColor:"#FFF"},avatarText:{fontSize:20,fontWeight:"900",color:"#E60012"},
  manage:{height:49,backgroundColor:"#E60012",borderRadius:13,marginTop:16,paddingHorizontal:15,flexDirection:"row",alignItems:"center",gap:10},manageText:{flex:1,color:"#FFF",fontSize:14,fontWeight:"800"},
