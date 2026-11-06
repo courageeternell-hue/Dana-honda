@@ -291,10 +291,24 @@ export default function AdminDashboard() {
   function manageMember(member: TeamMember) {
     const actions = [
       { text: "Batal", style: "cancel" as const },
-      { text: member.is_active ? "Nonaktifkan akun" : "Aktifkan akun", onPress: () => updateMember(member, { is_active: !member.is_active }) },
+      {
+        text: member.is_active ? "Nonaktifkan akun" : "Aktifkan akun",
+        onPress: () => updateMember(member, { is_active: !member.is_active }),
+      },
     ];
     if (profile?.role === "admin" && member.role !== "admin") {
-      actions.push({ text: member.role === "sales" ? "Jadikan Supervisor" : "Jadikan Sales", onPress: () => updateMember(member, { role: member.role === "sales" ? "supervisor" : "sales" }) } as typeof actions[number]);
+      if (member.role !== "sales") {
+        actions.push({
+          text: "Jadikan Sales",
+          onPress: () => updateMember(member, { role: "sales" }),
+        } as typeof actions[number]);
+      }
+      if (member.role !== "supervisor") {
+        actions.push({
+          text: "Jadikan Supervisor",
+          onPress: () => updateMember(member, { role: "supervisor" }),
+        } as typeof actions[number]);
+      }
     }
     Alert.alert(member.full_name || "Pengguna", "Pilih tindakan", actions);
   }
@@ -337,7 +351,7 @@ export default function AdminDashboard() {
         return <View key={member.id} style={s.memberCard}><View style={s.memberTop}><View style={{ flex: 1 }}>
           <Text style={s.memberName}>{member.full_name || "Tanpa nama"}</Text><Text style={s.memberEmail}>{member.email || "-"}</Text><Text style={s.memberEmail}>{member.phone || "-"}</Text>
           <Text style={s.memberRole}>{member.role === "admin" ? "Admin" : member.role === "supervisor" ? "Supervisor" : "Sales"}</Text>
-          {profile?.role === "admin" && member.role !== "admin" && <View style={{marginTop:10}}><Text style={s.memberEmail}>Ubah peran pengguna</Text><View style={s.choices}><Pressable disabled={member.role === "sales"} onPress={() => updateMember(member,{role:"sales"})} style={[s.choice,member.role === "sales"&&s.choiceActive]}><Text style={[s.choiceText,member.role === "sales"&&s.choiceTextActive]}>Sales</Text></Pressable><Pressable disabled={member.role === "supervisor"} onPress={() => updateMember(member,{role:"supervisor"})} style={[s.choice,member.role === "supervisor"&&s.choiceActive]}><Text style={[s.choiceText,member.role === "supervisor"&&s.choiceTextActive]}>Supervisor</Text></Pressable></View></View>}
+
         </View><View style={s.memberActions}><View style={[s.active, !member.is_active && s.inactive]}><Text style={s.memberStatusText}>{member.is_active ? "Aktif" : "Nonaktif"}</Text></View><Pressable onPress={() => manageMember(member)} style={s.manageButton} accessibilityRole="button" accessibilityLabel={`Kelola ${member.full_name}`}><Text style={s.manageText}>Kelola</Text></Pressable></View></View>
         <View style={s.memberStats}><Text style={s.memberStat}>Prospek <Text style={s.statNumber}>{item.prospects}</Text></Text><Text style={s.memberStat}>SPK <Text style={s.statNumber}>{item.spk}</Text></Text><Text style={s.memberStat}>Jual <Text style={s.statNumber}>{item.closing}</Text></Text></View></View>;
       })}
