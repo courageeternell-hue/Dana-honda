@@ -11,7 +11,7 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/dana-honda-icon-square.png"
+        "foregroundImage": "./assets/dana-honda-icon.png"
       }
     },
     "plugins": [
@@ -27,7 +27,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#FFFFFF",
-          "image": "./assets/dana-honda-icon-square.png",
+          "image": "./assets/dana-honda-icon.png",
           "imageWidth": 200
         }
       ]
@@ -41,6 +41,6 @@
       }
     },
     "owner": "ichatasya",
-    "icon": "./assets/dana-honda-icon-square.png"
+    "icon": "./assets/dana-honda-icon.png"
   }
 }
