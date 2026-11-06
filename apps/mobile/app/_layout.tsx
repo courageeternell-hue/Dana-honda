@@ -11,9 +11,9 @@ function LocalNotificationManager() {
   const { profile } = useAuth();
   useEffect(() => {
     if (!profile?.id) return;
-    void syncLocalSalesReminders(profile.id);
+    void syncLocalSalesReminders(profile.id).catch(() => {});
     const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") void syncLocalSalesReminders(profile.id);
+      if (state === "active") void syncLocalSalesReminders(profile.id).catch(() => {});
     });
     return () => subscription.remove();
   }, [profile?.id]);
