@@ -1,7 +1,12 @@
-
 name: Publish OTA Preview
 
 on:
+  push:
+    branches:
+      - native-mobile-app
+    paths:
+      - "apps/mobile/**"
+      - ".github/workflows/ota-preview.yml"
   workflow_dispatch:
 
 permissions:
@@ -38,14 +43,14 @@ jobs:
       - name: Check Expo Configuration
         run: npx expo config --type public
 
-      - name: Publish OTA Update
+      - name: Publish Android OTA Update
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           CI: "1"
         run: >
-          npx eas-cli update
+          npx eas-cli@latest update
           --channel preview
+          --environment preview
           --platform android
-          --message "Update menu Kelola Pengguna"
+          --message "Automatic OTA update ${GITHUB_SHA}"
           --non-interactive
-
