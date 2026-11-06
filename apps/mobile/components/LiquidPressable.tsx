@@ -21,11 +21,7 @@ export function LiquidPressable({
   const scale = useRef(new Animated.Value(1)).current;
   const [pressed, setPressed] = useState(false);
 
-  const pressState: PressableStateCallbackType = {
-    pressed,
-    hovered: false,
-    focused: false,
-  };
+  const pressState: PressableStateCallbackType = { pressed };
 
   const pressIn = (event: Parameters<NonNullable<PressableProps["onPressIn"]>>[0]) => {
     setPressed(true);
