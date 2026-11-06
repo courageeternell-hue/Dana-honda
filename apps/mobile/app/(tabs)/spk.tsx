@@ -7,6 +7,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as XLSX from "xlsx-js-style";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 
 type Spk={id:string;user_id:string;customer_name:string;phone:string;unit_type:string;dp_cash:string|null;leasing:string|null;address:string|null;source:string|null;status:string;spk_date:string;notes:string|null};
@@ -15,6 +16,7 @@ const localDateString=(date:Date)=>`${date.getFullYear()}-${String(date.getMonth
 const blankDraft=():Draft=>({spk_date:localDateString(new Date()),customer_name:"",phone:"",unit_type:"",dp_cash:"",leasing:"",address:"",source:"",status:"Proses",notes:""});
 
 export default function SpkScreen(){
+ const insets=useSafeAreaInsets();
  const {profile}=useAuth();
  const [items,setItems]=useState<Spk[]>([]);
  const [draft,setDraft]=useState<Draft>(blankDraft());
@@ -63,7 +65,7 @@ export default function SpkScreen(){
  const formattedSpkDate=draft.spk_date?new Date(`${draft.spk_date}T00:00:00`).toLocaleDateString("id-ID",{day:"2-digit",month:"long",year:"numeric"}):"Pilih tanggal SPK";
  function handleDateChange(event:any,selectedDate?:Date){setShowDatePicker(false);if(event?.type==="set"&&selectedDate)setDraft(p=>({...p,spk_date:localDateString(selectedDate)}));}
  const filteredItems=items.filter(item=>{const q=search.trim().toLowerCase();const matchesSearch=!q||[item.customer_name,item.phone,item.unit_type,item.leasing??""].some(v=>v.toLowerCase().includes(q));const statusMatch=statusFilter==="Semua"||(statusFilter==="Selesai"&&item.status==="Jual")||item.status===statusFilter;return matchesSearch&&statusMatch;});
- return <View style={s.page}>
+ return <View style={[s.page,{paddingTop:insets.top+18}]}>
   <View style={s.header}><View><Text style={s.title}>SPK</Text><Text style={s.subtitle}>{items.length} data SPK</Text></View><View style={s.headerActions}><Pressable style={s.excelBtn} onPress={exportSpkExcel}><Text style={s.excelText}>Excel</Text></Pressable><Pressable style={s.add} onPress={openNew}><Text style={s.addText}>+ Tambah</Text></Pressable></View></View>
   <TextInput value={search} onChangeText={setSearch} placeholder="Cari nama, nomor HP, tipe motor..." placeholderTextColor="#A1A1B0" style={s.searchInput}/>
   <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0,flexShrink:0}} contentContainerStyle={s.filterRow}>{["Semua","Proses","Selesai","Batal"].map(v=><Pressable key={v} onPress={()=>setStatusFilter(v)} style={[s.filterChip,statusFilter===v&&s.filterChipActive]}><Text style={[s.filterText,statusFilter===v&&s.filterTextActive]}>{v}</Text></Pressable>)}</ScrollView>
