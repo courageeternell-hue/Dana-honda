@@ -48,7 +48,7 @@ export default function SpkScreen(){
       if(error)throw error;
       const rows=[["Tanggal","Nama Sales","Nama Konsumen","Alamat Konsumen","Sumber SPK","Type Unit","Harga","Leasing/ Keterangan","Status"],...(data??[]).map(x=>[x.spk_date||"",x.sales_name||profile.full_name||"",x.customer_name||"",x.address||"",x.source||"",x.unit_type||"",x.dp_cash||"",[x.leasing,x.notes].filter(Boolean).join(" / "),x.status||""])];
       const ws=XLSX.utils.aoa_to_sheet(rows);
-      ws["!cols"]=[13,20,24,30,18,18,18,28,14].map(wch=>({wch}));
+      ws["!cols"]=[14,22,32,42,20,20,18,38,20].map(wch=>({wch}));
       ws["!rows"]=Array.from({length:rows.length},(_,i)=>({hpt:i===0?30:25}));
       for(let r=0;r<rows.length;r++)for(let c=0;c<9;c++){const cell=ws[XLSX.utils.encode_cell({r,c})] as any;if(cell)cell.s={font:{name:"Times New Roman",sz:11,bold:r===0},alignment:{horizontal:"center",vertical:"center",wrapText:true},border:{top:{style:"thin",color:{rgb:"D9D9D9"}},bottom:{style:"thin",color:{rgb:"D9D9D9"}},left:{style:"thin",color:{rgb:"D9D9D9"}},right:{style:"thin",color:{rgb:"D9D9D9"}}},...(r===0?{fill:{patternType:"solid",fgColor:{rgb:"FCE8E8"}}}:{})};}
       if(rows.length>1)ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows.length-1,c:8}})};
