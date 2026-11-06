@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { ReactNode } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,12 +16,9 @@ export const AppAlert = {
 export function AppAlertProvider({ children }: { children: ReactNode }) {
   const [dialog, setDialog] = useState<DialogState | null>(null);
 
-  useEffect(() => {
-    presentDialog = (title, message, buttons, options) => {
-      setDialog({ title, message, buttons: buttons?.length ? buttons : [{ text: "Mengerti" }], cancelable: options?.cancelable !== false });
-    };
-    return () => { presentDialog = () => {}; };
-  }, []);
+  presentDialog = (title, message, buttons, options) => {
+    setDialog({ title, message, buttons: buttons?.length ? buttons : [{ text: "Mengerti" }], cancelable: options?.cancelable !== false });
+  };
 
   const close = () => setDialog(null);
   const runButton = (button: AlertButton) => {
