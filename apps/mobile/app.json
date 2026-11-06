@@ -39,6 +39,14 @@
           "image": "./assets/dana-honda-icon.png",
           "imageWidth": 200
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/dana-honda-icon.png",
+          "color": "#E60012",
+          "defaultChannel": "sales-reminders"
+        }
       ]
     ],
     "experiments": {
