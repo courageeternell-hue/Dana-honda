@@ -5,9 +5,10 @@ import {
   View,
   type PressableProps,
   type PressableStateCallbackType,
+  type ViewStyle,
 } from "react-native";
 
-type Props = PressableProps & { glass?: boolean };
+type Props = PressableProps & { glass?: boolean; containerStyle?: ViewStyle };
 
 export function LiquidPressable({
   children,
@@ -16,41 +17,29 @@ export function LiquidPressable({
   onPressOut,
   disabled,
   glass = true,
+  containerStyle,
   ...props
 }: Props) {
   const scale = useRef(new Animated.Value(1)).current;
   const [pressed, setPressed] = useState(false);
-
   const pressState: PressableStateCallbackType = { pressed };
 
   const pressIn = (event: Parameters<NonNullable<PressableProps["onPressIn"]>>[0]) => {
     setPressed(true);
-    Animated.spring(scale, {
-      toValue: 0.975,
-      speed: 38,
-      bounciness: 3,
-      useNativeDriver: true,
-    }).start();
+    Animated.spring(scale, { toValue: 0.975, speed: 38, bounciness: 3, useNativeDriver: true }).start();
     onPressIn?.(event);
   };
 
   const pressOut = (event: Parameters<NonNullable<PressableProps["onPressOut"]>>[0]) => {
     setPressed(false);
-    Animated.spring(scale, {
-      toValue: 1,
-      speed: 26,
-      bounciness: 7,
-      useNativeDriver: true,
-    }).start();
+    Animated.spring(scale, { toValue: 1, speed: 26, bounciness: 7, useNativeDriver: true }).start();
     onPressOut?.(event);
   };
 
-  const resolvedStyle = [
-    typeof style === "function" ? style(pressState) : style,
-  ];
+  const resolvedStyle = typeof style === "function" ? style(pressState) : style;
 
   return (
-    <Animated.View style={{ transform: [{ scale }] }}>
+    <Animated.View style={[containerStyle, { transform: [{ scale }] }]}>
       <NativePressable
         {...props}
         disabled={disabled}
