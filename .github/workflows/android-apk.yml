@@ -1,9 +1,6 @@
 name: Android APK (GitHub)
 
 on:
-  push:
-    branches:
-      - native-mobile-app
   workflow_dispatch:
 
 jobs:
