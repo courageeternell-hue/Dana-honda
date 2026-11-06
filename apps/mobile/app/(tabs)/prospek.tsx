@@ -7,6 +7,7 @@ import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as XLSX from "xlsx-js-style";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { supabase } from "@/lib/supabase";
 
 type Prospect = { id:string; user_id:string; customer_name:string; phone:string; unit_interest:string|null; source:string|null; address:string|null; status:string; deal_status:string; spk_created:boolean; notes:string|null; follow_up:string|null; created_at:string };
@@ -14,6 +15,7 @@ type Draft = { customer_name:string; phone:string; unit_interest:string; source:
 const blank:Draft={customer_name:"",phone:"",unit_interest:"",source:"",address:"",status:"Belum Respon",notes:"",follow_up:""};
 
 export default function ProspekScreen() {
+  const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const [items,setItems]=useState<Prospect[]>([]);
   const [draft,setDraft]=useState<Draft>(blank);
@@ -126,7 +128,7 @@ export default function ProspekScreen() {
   const field=(label:keyof Draft,placeholder:string,multiline=false)=> <View style={s.field}><Text style={s.label}>{({customer_name:"Nama pelanggan",phone:"Nomor HP",unit_interest:"Motor yang diminati",source:"Sumber prospek",address:"Alamat konsumen",status:"Status",notes:"Keterangan",follow_up:"Jadwal follow-up"} as Record<string,string>)[label]}</Text><TextInput value={draft[label]} onChangeText={v=>setDraft(p=>({...p,[label]:v}))} placeholder={placeholder} placeholderTextColor="#A1A1B0" style={[s.input,multiline&&s.multiline]} multiline={multiline} keyboardType={label==="phone"?"phone-pad":"default"}/></View>;
 
   const filteredItems=items.filter(item=>{const q=search.trim().toLowerCase();const matchesSearch=!q||[item.customer_name,item.phone,item.unit_interest??"",item.source??""].some(v=>v.toLowerCase().includes(q));const statusMatch=statusFilter==="Semua"||(statusFilter==="Baru"&&item.status==="Belum Respon")||(statusFilter==="Proses"&&item.status==="Follow Up")||(statusFilter==="Deal"&&(item.deal_status==="Deal"||item.status==="Tertarik"));return matchesSearch&&statusMatch;});
-  return <View style={s.page}>
+  return <View style={[s.page,{paddingTop:insets.top+18}]}>
     <View style={s.header}><View><Text style={s.title}>Prospek</Text><Text style={s.subtitle}>{items.length} data pelanggan</Text></View><View style={s.headerActions}><Pressable style={s.excelBtn} onPress={exportProspekExcel}><Text style={s.excelText}>Excel</Text></Pressable><Pressable style={s.add} onPress={openNew}><Text style={s.addText}>+ Tambah</Text></Pressable></View></View>
     <TextInput value={search} onChangeText={setSearch} placeholder="Cari nama, nomor HP, motor..." placeholderTextColor="#A1A1B0" style={s.searchInput}/>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{flexGrow:0,flexShrink:0}} contentContainerStyle={s.filterRow}>{["Semua","Baru","Proses","Deal"].map(v=><Pressable key={v} onPress={()=>setStatusFilter(v)} style={[s.filterChip,statusFilter===v&&s.filterChipActive]}><Text style={[s.filterText,statusFilter===v&&s.filterTextActive]}>{v}</Text></Pressable>)}</ScrollView>
