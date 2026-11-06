@@ -16,7 +16,7 @@ function UpdateManager() {
         const update = await Updates.checkForUpdateAsync();
         if (!active || !update.isAvailable) return;
 
-        AppAppAlert.alert(
+        AppAlert.alert(
           "Pembaruan tersedia",
           "Versi terbaru Asisten Sales sudah tersedia. Perbarui sekarang untuk menggunakan fitur dan perbaikan terbaru.",
           [
