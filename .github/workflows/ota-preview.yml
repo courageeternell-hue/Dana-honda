@@ -39,6 +39,11 @@ jobs:
       - name: Check Expo Configuration
         run: npx expo config --type public
 
+      - name: Verify Preview Environment Variables
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx eas-cli env:list --environment preview
+
       - name: Publish OTA Update
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
@@ -46,6 +51,7 @@ jobs:
         run: >
           npx eas-cli update
           --channel preview
+          --environment preview
           --platform android
-          --message "Update menu Kelola Pengguna"
+          --message "Fix Supabase environment in preview update"
           --non-interactive
