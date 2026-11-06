@@ -308,6 +308,7 @@ export default function AdminDashboard() {
   return <ScrollView style={s.page} contentContainerStyle={s.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); void Promise.all([load(), loadSupervisorData()]); }} tintColor="#D71920" />}>
     <Pressable onPress={() => router.back()}><Text style={s.back}>‹ Kembali ke Profil</Text></Pressable>
     <View style={s.headerRow}><View style={{ flex: 1 }}><Text style={s.title}>Dasbor {profile.role === "admin" ? "Admin" : "Supervisor"}</Text><Text style={s.subtitle}>Performa tim dan manajemen pengguna.</Text></View></View>
+    {(profile.role === "admin" || profile.role === "supervisor") && <Pressable style={s.addUserButton} onPress={openUserModal} accessibilityRole="button" accessibilityLabel="Tambah pengguna baru"><View style={s.addUserIcon}><Text style={s.addUserPlus}>＋</Text></View><View style={{flex:1}}><Text style={s.addUserTitle}>Tambah Pengguna</Text><Text style={s.addUserSubtitle}>{profile.role === "admin" ? "Buat akun Sales atau Supervisor" : "Buat akun Sales baru"}</Text></View><Text style={s.addUserArrow}>›</Text></Pressable>}
     {loading ? <View style={s.loading}><ActivityIndicator color="#D71920" /><Text style={s.muted}>Memuat data tim...</Text></View> : <>
       <View style={s.summary}><Text style={s.summaryLabel}>TOTAL AKTIVITAS TIM</Text><View style={s.summaryGrid}>
         <View style={s.summaryItem}><Text style={s.summaryValue}>{totals.prospects}</Text><Text style={s.summaryText}>Prospek</Text></View>
@@ -316,7 +317,6 @@ export default function AdminDashboard() {
       </View></View>
       {!!error && <Text style={s.error}>{error}</Text>}
         <View style={s.actionRow}>
-        {profile.role === "admin" && <Pressable style={s.primaryButton} onPress={openUserModal} accessibilityRole="button" accessibilityLabel="Tambah pengguna"><Text style={s.primaryText}>+ Tambah Pengguna</Text></Pressable>}
         <Pressable style={s.exportButton} onPress={() => router.push("/target")}><Text style={s.exportText}>Atur Target</Text></Pressable>
         <Pressable style={s.exportButton} onPress={exportExcel}><Text style={s.exportText}>↓ Excel</Text></Pressable>
       </View>
@@ -353,7 +353,7 @@ export default function AdminDashboard() {
       })}
       {members.length === 0 && <Text style={s.muted}>Belum ada anggota tim.</Text>}
     </>}
-    <View style={s.notice}><Text style={s.noticeTitle}>Akses pengguna</Text><Text style={s.noticeText}>Admin dapat membuat akun dan mengubah role Sales/Supervisor. Admin dan Supervisor dapat mengaktifkan atau menonaktifkan akun.</Text></View>
+    <View style={s.notice}><Text style={s.noticeTitle}>Akses pengguna</Text><Text style={s.noticeText}>Admin dapat membuat akun Sales dan Supervisor serta mengubah role. Supervisor dapat membuat akun Sales. Admin dan Supervisor dapat mengaktifkan atau menonaktifkan akun.</Text></View>
     <Modal visible={userModal} animationType="slide" transparent onRequestClose={() => setUserModal(false)}>
       <View style={s.overlay}><View style={s.sheet}><ScrollView keyboardShouldPersistTaps="handled">
         <Text style={s.sheetTitle}>Tambah pengguna</Text>
