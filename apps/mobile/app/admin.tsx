@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ActivityIndicator, KeyboardAvoidingView, Modal, Platform, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { AppAlert as Alert } from "@/components/AppAlert";
 import { LiquidPressable as Pressable } from "@/components/LiquidPressable";
 import { Redirect, router } from "expo-router";
 import * as FileSystem from "expo-file-system/legacy";
