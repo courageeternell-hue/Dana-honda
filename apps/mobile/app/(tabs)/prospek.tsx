@@ -109,11 +109,11 @@ export default function ProspekScreen() {
   async function exportProspekExcel(){
     if(!profile)return;
     try{
-      const {data,error}=await supabase.from("prospects").select("prospect_date,customer_name,phone,source,lead_response,status,deal_status,spk_created,notes").eq("user_id",profile.id).order("prospect_date",{ascending:false});
+      const {data,error}=await supabase.from("prospects").select("prospect_date,customer_name,phone,address,source,lead_response,status,deal_status,spk_created,notes").eq("user_id",profile.id).order("prospect_date",{ascending:false});
       if(error)throw error;
-      const rows=[["No","Tanggal","Nama Konsumen","No Hp konsumen","Prospek Up","Respon","Tertarik","Deal","SPK","Keterangan"],...(data??[]).map((x,i)=>[i+1,x.prospect_date||"",x.customer_name||"",x.phone||"",x.source||"",x.lead_response||x.status||"",x.status==="Tertarik"?"Ya":"Tidak",x.deal_status||"",x.spk_created?"Ya":"Tidak",x.notes||""])];
+      const rows=[["No","Tanggal","Nama Konsumen","No HP Konsumen","Alamat Konsumen","Prospek Up","Respon / Status","Tertarik","Deal","SPK","Keterangan"],...(data??[]).map((x,i)=>[i+1,x.prospect_date||"",x.customer_name||"",x.phone||"",x.address||"",x.source||"",x.lead_response||x.status||"",x.status==="Tertarik"?"Ya":"Tidak",x.deal_status||"",x.spk_created?"Ya":"Tidak",x.notes||""])];
       const ws=XLSX.utils.aoa_to_sheet(rows);
-      ws["!cols"]=[6,13,24,18,18,18,12,12,10,28].map(wch=>({wch}));
+      ws["!cols"]=[6,14,32,20,42,20,24,14,16,12,40].map(wch=>({wch}));
       ws["!rows"]=Array.from({length:rows.length},(_,i)=>({hpt:i===0?30:25}));
       for(let r=0;r<rows.length;r++)for(let c=0;c<10;c++){const cell=ws[XLSX.utils.encode_cell({r,c})] as any;if(cell)cell.s={font:{name:"Times New Roman",sz:11,bold:r===0},alignment:{horizontal:"center",vertical:"center",wrapText:true},border:{top:{style:"thin",color:{rgb:"D9D9D9"}},bottom:{style:"thin",color:{rgb:"D9D9D9"}},left:{style:"thin",color:{rgb:"D9D9D9"}},right:{style:"thin",color:{rgb:"D9D9D9"}}},...(r===0?{fill:{patternType:"solid",fgColor:{rgb:"FCE8E8"}}}:{})};}
       if(rows.length>1)ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows.length-1,c:9}})};
