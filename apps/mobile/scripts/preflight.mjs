@@ -33,14 +33,17 @@ const pkg = readJson("package.json");
 const lock = readJson("package-lock.json");
 const lockRoot = lock.packages?.[""];
 
-if (app.owner !== "ichatasya") errors.push(`Expo owner harus ichatasya, sekarang: ${app.owner ?? "(kosong)"}`);
+if (app.owner !== "caturrrr") errors.push(`Expo owner harus caturrrr, sekarang: ${app.owner ?? "(kosong)"}`);
+if (app.slug !== "wkwkwkw") errors.push(`Expo slug harus wkwkwkw, sekarang: ${app.slug ?? "(kosong)"}`);
+if (app.extra?.eas?.projectId !== "7279aa93-83a0-4581-8bc4-af429a1d856b") {
+  errors.push("EAS projectId tidak cocok dengan project caturrrr/wkwkwkw");
+}
 if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(app.extra?.eas?.projectId ?? "")) {
   errors.push("EAS projectId belum valid di app.json");
 }
 if (!app.android?.package) errors.push("android.package belum diatur di app.json");
-if (eas.build?.preview?.android?.buildType !== "apk") errors.push("Profil preview harus menghasilkan APK");
-if (eas.build?.preview?.distribution !== "internal") errors.push("Profil preview harus memakai distribution internal");
-if (eas.build?.preview?.environment !== "preview") errors.push("Profil preview harus memakai environment preview");
+if (eas.build?.["production-apk"]?.android?.buildType !== "apk") errors.push("Profil production-apk harus menghasilkan APK");
+if (eas.build?.production?.environment !== "production") errors.push("Profil production harus memakai environment production");
 
 for (const section of ["dependencies", "devDependencies"]) {
   const expected = pkg[section] ?? {};
@@ -50,15 +53,15 @@ for (const section of ["dependencies", "devDependencies"]) {
   }
 }
 
-if (!process.env.EXPO_PUBLIC_SUPABASE_URL || !process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
-  warnings.push("Pastikan EXPO_PUBLIC_SUPABASE_URL dan EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY sudah diisi pada EAS > Environment > preview. Jangan masukkan service-role key.");
-}
+// EAS injects Production environment variables on the remote build worker.
+
 
 console.log("Pemeriksaan awal Asisten Sales (Expo)");
 console.log(`Expo account: ${app.owner}`);
+console.log(`Expo slug: ${app.slug}`);
 console.log(`EAS project: ${app.extra.eas.projectId}`);
 console.log(`Android package: ${app.android.package}`);
-console.log(`Preview output: ${eas.build.preview.android.buildType.toUpperCase()}`);
+console.log(`Production output: ${eas.build["production-apk"].android.buildType.toUpperCase()}`);
 
 for (const warning of warnings) console.warn(`PERHATIAN: ${warning}`);
 if (errors.length) {
