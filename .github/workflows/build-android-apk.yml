@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    name: EAS Android preview APK
+    name: EAS Android production APK
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -46,7 +46,7 @@ jobs:
             echo "::error::GitHub repository secret EXPO_TOKEN is missing."
             exit 1
           fi
-      - name: Build installable Android APK
+      - name: Build installable Android production APK
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: npx eas-cli build --platform android --profile preview --non-interactive --wait
+        run: npx eas-cli build --platform android --profile production-apk --non-interactive --wait
