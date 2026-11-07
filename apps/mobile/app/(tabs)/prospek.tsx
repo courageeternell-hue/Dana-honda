@@ -62,7 +62,8 @@ export default function ProspekScreen() {
   }
   function convertToSpk(item:Prospect){
     if(item.spk_created){Alert.alert("Sudah menjadi SPK","Prospek ini sudah pernah dikonversi.");return;}
-    if(!item.unit_interest?.trim()){Alert.alert("Tipe motor belum diisi","Edit prospek dan isi motor yang diminati sebelum diubah menjadi SPK.");return;}
+    const unitInterest = item.unit_interest?.trim() ?? "";
+    if(!unitInterest){Alert.alert("Tipe motor belum diisi","Edit prospek dan isi motor yang diminati sebelum diubah menjadi SPK.");return;}
     Alert.alert("Ubah Prospek menjadi SPK?",`Data ${item.customer_name} akan disalin ke Buku SPK dengan status Proses. Prospek asli tetap tersimpan.`,[
       {text:"Batal",style:"cancel"},
       {text:"Ubah ke SPK",onPress:async()=>{
@@ -79,7 +80,7 @@ export default function ProspekScreen() {
           phone:item.phone,
           address:item.address,
           source:item.source,
-          unit_type:item.unit_interest.trim(),
+          unit_type:unitInterest,
           dp_cash:null,
           leasing:null,
           notes:item.notes,
