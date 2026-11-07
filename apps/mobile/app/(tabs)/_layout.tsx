@@ -62,7 +62,7 @@ export default function TabLayout() {
         options={{
           title: "Home Page",
           tabBarIcon: ({ focused }) => <AppIcon name="home" size={21} active={focused} />,
-          tabBarButton,
+          tabBarButton: tabButton,
         }}
       />
       <Tabs.Screen
@@ -70,7 +70,7 @@ export default function TabLayout() {
         options={{
           title: "Prospek",
           tabBarIcon: ({ focused }) => <AppIcon name="people" size={21} active={focused} />,
-          tabBarButton,
+          tabBarButton: tabButton,
         }}
       />
       <Tabs.Screen
@@ -99,7 +99,7 @@ export default function TabLayout() {
               <Ionicons name="trending-up" size={26} color={focused ? "#FFFFFF" : primary} />
             </View>
           ),
-          tabBarButton,
+          tabBarButton: tabButton,
         }}
       />
       <Tabs.Screen
@@ -107,7 +107,7 @@ export default function TabLayout() {
         options={{
           title: "SPK",
           tabBarIcon: ({ focused }) => <AppIcon name="document-text" size={21} active={focused} />,
-          tabBarButton,
+          tabBarButton: tabButton,
         }}
       />
       <Tabs.Screen
@@ -115,7 +115,7 @@ export default function TabLayout() {
         options={{
           title: "Profil",
           tabBarIcon: ({ focused }) => <AppIcon name="person" size={21} active={focused} />,
-          tabBarButton,
+          tabBarButton: tabButton,
         }}
       />
     </Tabs>
