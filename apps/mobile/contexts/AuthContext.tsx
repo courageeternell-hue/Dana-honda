@@ -25,6 +25,16 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Permintaan melewati batas waktu.")), timeoutMs);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); },
+    );
+  });
+}
+
 async function getProfile(userId: string): Promise<UserProfile> {
   const { data, error } = await supabase
     .from("profiles")
@@ -58,12 +68,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const loadProfile = async (userId: string) => {
       const requestId = ++profileRequest;
       try {
-        const nextProfile = await getProfile(userId);
+        const nextProfile = await withTimeout(getProfile(userId), 15000);
         if (mounted && requestId === profileRequest) setProfile(nextProfile);
       } catch {
         if (mounted && requestId === profileRequest) {
           setProfile(null);
-          await supabase.auth.signOut();
+          // Do not block the startup screen while sign-out contacts the auth server.
+          void supabase.auth.signOut().catch(() => undefined);
         }
       } finally {
         if (mounted && requestId === profileRequest) setLoading(false);
@@ -94,7 +105,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     });
 
-    void supabase.auth.getSession().then(({ data, error }) => {
+    void withTimeout(supabase.auth.getSession(), 10000).then(({ data, error }) => {
       if (!mounted) return;
       if (error || !data.session) {
         setSession(null);
@@ -105,6 +116,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       setLoading(true);
       void loadProfile(data.session.user.id);
+    }).catch(() => {
+      if (!mounted) return;
+      setSession(null);
+      setProfile(null);
+      setLoading(false);
     });
 
     return () => {
