@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { Redirect } from "expo-router";
 import { Animated, Easing, Image, StyleSheet, Text, View } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
@@ -8,7 +7,6 @@ const BRAND = "ASISTEN SALES";
 
 export default function IndexRoute() {
   const { session, loading, profile } = useAuth();
-  const splashSound = useAudioPlayer(require("../assets/water-drop-splash.mp3"));
   const [brandText, setBrandText] = useState("");
   const [animationDone, setAnimationDone] = useState(false);
   const dropY = useRef(new Animated.Value(-360)).current;
@@ -19,13 +17,6 @@ export default function IndexRoute() {
 
   useEffect(() => {
     let typingTimer: ReturnType<typeof setInterval> | undefined;
-    let soundTimer: ReturnType<typeof setTimeout> | undefined;
-    soundTimer = setTimeout(() => {
-      void setAudioModeAsync({ playsInSilentMode: true }).then(() => {
-        splashSound.volume = 0.42;
-        splashSound.play();
-      }).catch(() => {});
-    }, 350);
     const animation = Animated.sequence([
       Animated.delay(350),
       Animated.parallel([
@@ -79,8 +70,6 @@ export default function IndexRoute() {
         setBrandText(BRAND.slice(0, index));
         if (index >= BRAND.length) {
           if (typingTimer) clearInterval(typingTimer);
-      if (soundTimer) clearTimeout(soundTimer);
-      splashSound.pause();
           setTimeout(() => setAnimationDone(true), 700);
         }
       }, 135);
@@ -89,10 +78,8 @@ export default function IndexRoute() {
     return () => {
       animation.stop();
       if (typingTimer) clearInterval(typingTimer);
-      if (soundTimer) clearTimeout(soundTimer);
-      splashSound.pause();
     };
-  }, [dropY, dropOpacity, splashScale, logoOpacity, logoScale, splashSound]);
+  }, [dropY, dropOpacity, splashScale, logoOpacity, logoScale]);
 
   if (loading || !animationDone) {
     return (
