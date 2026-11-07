@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const monthNames = [
   "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -50,6 +51,7 @@ function formatDate(value: string) {
 }
 
 export default function FollowUp() {
+  const insets = useSafeAreaInsets();
   const { profile } = useAuth();
   const [items, setItems] = useState<P[]>([]);
   const [loading, setLoading] = useState(true);
@@ -94,7 +96,7 @@ export default function FollowUp() {
   return (
     <ScrollView
       style={s.page}
-      contentContainerStyle={s.content}
+      contentContainerStyle={[s.content, { paddingTop: insets.top + 18 }]}
       refreshControl={
         <RefreshControl refreshing={loading} onRefresh={load} tintColor="#E60012" />
       }
