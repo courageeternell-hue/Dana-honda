@@ -25,7 +25,8 @@
       "channel": "production",
       "android": {
         "buildType": "app-bundle"
-      }
+      },
+      "environment": "production"
     },
     "production-apk": {
       "extends": "production",
