@@ -16,7 +16,7 @@ export function LiquidPressable({
   onPressIn,
   onPressOut,
   disabled,
-  glass = true,
+  glass = false,
   containerStyle,
   ...props
 }: Props) {
