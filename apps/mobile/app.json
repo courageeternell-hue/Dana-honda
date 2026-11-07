@@ -8,8 +8,8 @@
     "userInterfaceStyle": "light",
     "updates": {
       "url": "https://u.expo.dev/fd9bfa1d-db87-406f-8e61-7b053dbc0c45",
-      "enabled": true,
-      "checkAutomatically": "ON_LOAD",
+      "enabled": false,
+      "checkAutomatically": "NEVER",
       "fallbackToCacheTimeout": 0
     },
     "runtimeVersion": {
