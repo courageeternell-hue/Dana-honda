@@ -31,10 +31,11 @@ jobs:
           python - <<'PY'
           import base64
           from pathlib import Path
-          encoded = Path("assets/water-drop-splash.wav.b64").read_text().strip()
-          Path("assets/water-drop-splash.wav").write_bytes(base64.b64decode(encoded))
+          encoded = Path("assets/water-drop-splash.mp3.b64").read_text().strip()
+          Path("assets/water-drop-splash.mp3").write_bytes(base64.b64decode(encoded))
           PY
-          test -s assets/water-drop-splash.wav
+          test -s assets/water-drop-splash.mp3
+          ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 assets/water-drop-splash.mp3
       - name: Prepare square app icon
         run: |
           python -m pip install --quiet Pillow
