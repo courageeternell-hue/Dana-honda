@@ -8,7 +8,7 @@ const BRAND = "ASISTEN SALES";
 
 export default function IndexRoute() {
   const { session, loading, profile } = useAuth();
-  const splashSound = useAudioPlayer(require("../assets/water-drop-splash.wav"));
+  const splashSound = useAudioPlayer(require("../assets/water-drop-splash.mp3"));
   const [brandText, setBrandText] = useState("");
   const [animationDone, setAnimationDone] = useState(false);
   const dropY = useRef(new Animated.Value(-360)).current;
@@ -89,6 +89,8 @@ export default function IndexRoute() {
     return () => {
       animation.stop();
       if (typingTimer) clearInterval(typingTimer);
+      if (soundTimer) clearTimeout(soundTimer);
+      splashSound.pause();
     };
   }, [dropY, dropOpacity, splashScale, logoOpacity, logoScale, splashSound]);
 
