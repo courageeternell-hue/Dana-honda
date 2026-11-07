@@ -3,40 +3,45 @@ import { Redirect } from "expo-router";
 import { Animated, Easing, Image, StyleSheet, Text, View } from "react-native";
 import { useAuth } from "@/contexts/AuthContext";
 
+const BRAND = "ASISTEN SALES";
+
 export default function IndexRoute() {
   const { session, loading, profile } = useAuth();
+  const [brandText, setBrandText] = useState("");
   const [animationDone, setAnimationDone] = useState(false);
-  const dropY = useRef(new Animated.Value(-320)).current;
+  const dropY = useRef(new Animated.Value(-360)).current;
   const dropOpacity = useRef(new Animated.Value(0)).current;
-  const splashScale = useRef(new Animated.Value(0.05)).current;
+  const splashScale = useRef(new Animated.Value(0.04)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
-  const logoScale = useRef(new Animated.Value(0.65)).current;
+  const logoScale = useRef(new Animated.Value(0.82)).current;
 
   useEffect(() => {
+    let typingTimer: ReturnType<typeof setInterval> | undefined;
+
     const animation = Animated.sequence([
-      Animated.delay(180),
+      Animated.delay(350),
       Animated.parallel([
         Animated.timing(dropOpacity, {
           toValue: 1,
-          duration: 100,
+          duration: 220,
           useNativeDriver: true,
         }),
         Animated.timing(dropY, {
           toValue: 0,
-          duration: 620,
-          easing: Easing.in(Easing.quad),
+          duration: 1050,
+          easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
       ]),
       Animated.parallel([
         Animated.timing(dropOpacity, {
           toValue: 0,
-          duration: 100,
+          duration: 180,
           useNativeDriver: true,
         }),
         Animated.timing(splashScale, {
-          toValue: 34,
-          duration: 650,
+          toValue: 38,
+          duration: 1150,
           easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
@@ -44,24 +49,37 @@ export default function IndexRoute() {
       Animated.parallel([
         Animated.timing(logoOpacity, {
           toValue: 1,
-          duration: 420,
+          duration: 850,
+          easing: Easing.out(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.spring(logoScale, {
           toValue: 1,
-          friction: 5,
-          tension: 75,
+          friction: 8,
+          tension: 42,
           useNativeDriver: true,
         }),
       ]),
-      Animated.delay(650),
+      Animated.delay(300),
     ]);
 
     animation.start(({ finished }) => {
-      if (finished) setAnimationDone(true);
+      if (!finished) return;
+      let index = 0;
+      typingTimer = setInterval(() => {
+        index += 1;
+        setBrandText(BRAND.slice(0, index));
+        if (index >= BRAND.length) {
+          if (typingTimer) clearInterval(typingTimer);
+          setTimeout(() => setAnimationDone(true), 700);
+        }
+      }, 135);
     });
 
-    return () => animation.stop();
+    return () => {
+      animation.stop();
+      if (typingTimer) clearInterval(typingTimer);
+    };
   }, [dropY, dropOpacity, splashScale, logoOpacity, logoScale]);
 
   if (loading || !animationDone) {
@@ -69,10 +87,7 @@ export default function IndexRoute() {
       <View style={s.page}>
         <Animated.View
           pointerEvents="none"
-          style={[
-            s.redSplash,
-            { transform: [{ scale: splashScale }] },
-          ]}
+          style={[s.redSplash, { transform: [{ scale: splashScale }] }]}
         />
         <Animated.View
           pointerEvents="none"
@@ -93,12 +108,17 @@ export default function IndexRoute() {
             },
           ]}
         >
-          <Image
-            source={require("../assets/dana-honda-icon.png")}
-            style={s.logo}
-            resizeMode="contain"
-          />
-          <Text style={s.brand}>DANA HONDA</Text>
+          <View style={s.logoFrame}>
+            <Image
+              source={require("../assets/dana-honda-icon.png")}
+              style={s.logo}
+              resizeMode="contain"
+            />
+          </View>
+          <Text style={s.brand}>
+            {brandText}
+            <Text style={s.cursor}>|</Text>
+          </Text>
           <Text style={s.tagline}>Sales Management App</Text>
           <View style={s.loadingPill}>
             <View style={s.loadingDot} />
@@ -150,16 +170,36 @@ const s = StyleSheet.create({
     justifyContent: "center",
     zIndex: 2,
   },
+  logoFrame: {
+    width: 120,
+    height: 120,
+    borderRadius: 27,
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    elevation: 8,
+    shadowColor: "#76000A",
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 7 },
+  },
   logo: {
-    width: 116,
-    height: 116,
+    width: 112,
+    height: 112,
+    borderRadius: 24,
   },
   brand: {
-    marginTop: 18,
+    minHeight: 29,
+    marginTop: 19,
     color: "#FFFFFF",
     fontSize: 21,
     fontWeight: "900",
     letterSpacing: 2,
+  },
+  cursor: {
+    color: "#FFE5E7",
+    fontWeight: "400",
   },
   tagline: {
     marginTop: 6,
