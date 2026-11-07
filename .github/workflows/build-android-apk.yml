@@ -41,8 +41,8 @@ jobs:
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/dana-honda-icon-square.png
-          git diff --cached --quiet || git commit -m "chore: prepare square app icon [skip ci]"
+          git add assets/dana-honda-icon-square.png assets/water-drop-splash.wav
+          git diff --cached --quiet || git commit -m "chore: prepare generated splash assets [skip ci]"
 
       - name: Configure Expo authentication
         env:
