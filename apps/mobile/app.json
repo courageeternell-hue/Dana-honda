@@ -7,7 +7,7 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "updates": {
-      "url": "https://u.expo.dev/fd9bfa1d-db87-406f-8e61-7b053dbc0c45",
+      "url": "https://u.expo.dev/7279aa93-83a0-4581-8bc4-af429a1d856b",
       "enabled": false,
       "checkAutomatically": "NEVER",
       "fallbackToCacheTimeout": 0
@@ -46,10 +46,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": "fd9bfa1d-db87-406f-8e61-7b053dbc0c45"
+        "projectId": "7279aa93-83a0-4581-8bc4-af429a1d856b"
       }
     },
-    "owner": "ichatasya",
+    "owner": "caturrrr",
     "icon": "./assets/dana-honda-icon-square.png"
   }
 }
