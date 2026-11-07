@@ -40,6 +40,9 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
+      - name: Generate splash sound asset
+        run: python scripts/generate-splash-sound.py
+
       - name: Check Expo Configuration
         run: npx expo config --type public
 
