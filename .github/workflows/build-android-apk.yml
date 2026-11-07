@@ -21,8 +21,6 @@ jobs:
           cache-dependency-path: apps/mobile/package-lock.json
       - name: Install dependencies
         run: npm install
-      - name: Generate splash sound asset
-        run: python scripts/generate-splash-sound.py
       - name: Validate app configuration and TypeScript
         run: |
           npm run preflight
@@ -41,8 +39,8 @@ jobs:
           PY
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/dana-honda-icon-square.png assets/water-drop-splash.wav
-          git diff --cached --quiet || git commit -m "chore: prepare generated splash assets [skip ci]"
+          git add assets/dana-honda-icon-square.png
+          git diff --cached --quiet || git commit -m "chore: prepare generated app icon [skip ci]"
 
       - name: Configure Expo authentication
         env:
