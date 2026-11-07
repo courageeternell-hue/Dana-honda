@@ -1,4 +1,4 @@
-name: Publish OTA Preview
+name: Publish OTA Production
 
 on:
   push:
@@ -13,7 +13,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ota-preview
+  group: ota-production
   cancel-in-progress: false
 
 jobs:
@@ -43,14 +43,17 @@ jobs:
       - name: Check Expo Configuration
         run: npx expo config --type public
 
+      - name: TypeScript Check
+        run: npm run typecheck
+
       - name: Publish Android OTA Update
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           CI: "1"
         run: >
           npx eas-cli@latest update
-          --channel preview
-          --environment preview
+          --channel production
+          --environment production
           --platform android
-          --message "Automatic OTA update ${GITHUB_SHA}"
+          --message "Production OTA update ${GITHUB_SHA}"
           --non-interactive
