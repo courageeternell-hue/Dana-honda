@@ -46,7 +46,15 @@ jobs:
             echo "::error::GitHub repository secret EXPO_TOKEN is missing."
             exit 1
           fi
+      - name: Verify Expo project directory
+        run: |
+          pwd
+          test -f eas.json
+          test -f package.json
+          echo "Expo project directory verified"
+
       - name: Build installable Android production APK
+        working-directory: apps/mobile
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: npx eas-cli build --platform android --profile production-apk --non-interactive --wait
