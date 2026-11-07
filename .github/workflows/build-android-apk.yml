@@ -21,6 +21,15 @@ jobs:
           cache-dependency-path: apps/mobile/package-lock.json
       - name: Install dependencies
         run: npm install
+      - name: Restore splash sound asset
+        run: |
+          python - <<'PY'
+          import base64
+          from pathlib import Path
+          encoded = Path("assets/water-drop-splash.wav.b64").read_text().strip()
+          Path("assets/water-drop-splash.wav").write_bytes(base64.b64decode(encoded))
+          PY
+          test -s assets/water-drop-splash.wav
       - name: Validate app configuration and TypeScript
         run: |
           npm run preflight
