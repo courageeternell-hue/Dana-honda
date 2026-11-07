@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Redirect } from "expo-router";
 import { Animated, Easing, Image, StyleSheet, Text, View } from "react-native";
-import { setAudioModeAsync, useAudioPlayer } from "expo-audio";
 import { useAuth } from "@/contexts/AuthContext";
 
 const BRAND = "ASISTEN SALES";
@@ -15,27 +14,9 @@ export default function IndexRoute() {
   const splashScale = useRef(new Animated.Value(0.04)).current;
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.82)).current;
-  const splashSound = useAudioPlayer(require("../assets/water-drop-splash.wav"));
 
   useEffect(() => {
     let typingTimer: ReturnType<typeof setInterval> | undefined;
-    let soundTimer: ReturnType<typeof setTimeout> | undefined;
-
-    soundTimer = setTimeout(() => {
-      void (async () => {
-        try {
-          await setAudioModeAsync({
-            playsInSilentMode: true,
-            interruptionMode: "mixWithOthers",
-          });
-          splashSound.volume = 0.45;
-          splashSound.play();
-        } catch {
-          // The splash animation should continue even if audio is unavailable.
-        }
-      })();
-    }, 350);
-
     const animation = Animated.sequence([
       Animated.delay(350),
       Animated.parallel([
@@ -97,10 +78,8 @@ export default function IndexRoute() {
     return () => {
       animation.stop();
       if (typingTimer) clearInterval(typingTimer);
-      if (soundTimer) clearTimeout(soundTimer);
-      splashSound.pause();
     };
-  }, [dropY, dropOpacity, splashScale, logoOpacity, logoScale, splashSound]);
+  }, [dropY, dropOpacity, splashScale, logoOpacity, logoScale]);
 
   if (loading || !animationDone) {
     return (
