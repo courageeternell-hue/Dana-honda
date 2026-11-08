@@ -1,0 +1,62 @@
+name: Build iPhone IPA
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: EAS iOS production IPA
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - name: Checkout mobile app branch
+        uses: actions/checkout@v4
+        with:
+          ref: native-mobile-app
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Prepare square app icon
+        run: |
+          python -m pip install --quiet Pillow
+          python scripts/prepare-icon.py
+          test -f assets/dana-honda-icon-square.png
+          python - <<'PY'
+          from PIL import Image
+          p = "assets/dana-honda-icon-square.png"
+          with Image.open(p) as img:
+              assert img.size == (1024, 1024), f"Invalid icon size: {img.size}"
+          print("Square icon verified: 1024x1024")
+          PY
+
+      - name: Verify Expo authentication
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "::error::GitHub repository secret EXPO_TOKEN is missing."
+            exit 1
+          fi
+
+      - name: Verify iOS app configuration
+        run: |
+          node -e "const c=require('./app.json').expo; if (!c.ios?.bundleIdentifier) process.exit(1); console.log('iOS bundle identifier:', c.ios.bundleIdentifier)"
+          npx eas-cli config --platform ios --profile production-ios
+
+      - name: Build iPhone install package
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx eas-cli build --platform ios --profile production-ios --non-interactive --wait
