@@ -33,6 +33,11 @@
       "android": {
         "buildType": "apk"
       }
+    },
+    "production-ios": {
+      "extends": "production",
+      "distribution": "store",
+      "ios": {}
     }
   },
   "submit": {
