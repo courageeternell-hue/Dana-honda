@@ -15,6 +15,9 @@
     "runtimeVersion": {
       "policy": "appVersion"
     },
+    "ios": {
+      "bundleIdentifier": "com.danz.hondasales"
+    },
     "android": {
       "package": "com.danz.hondasales",
       "versionCode": 2,
